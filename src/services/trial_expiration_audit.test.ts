@@ -41,6 +41,9 @@ describe('Authoritative Free Trial Expiration, Entitlement Transition & Cron Aud
     Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, seed & 0xff, 0x0a]);
 
   beforeEach(() => {
+    setMailerTransporterForTesting({
+      sendMail: async () => ({ messageId: 'mock-test-msg', accepted: ['user@test.com'] }),
+    } as any);
     _resetMockSubscriptions();
     clearMockDocStore();
     _resetMockMembers();

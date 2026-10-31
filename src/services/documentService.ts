@@ -5,6 +5,7 @@ import {
   ALLOWED_DOC_CATEGORIES,
   DocumentCategory,
 } from '../models/Document';
+import { HouseholdMemberModel } from '../models/HouseholdMember';
 import { Subscription } from '../models/Subscription';
 import { AUTHORITATIVE_PLANS } from '../config/planConfig';
 import {

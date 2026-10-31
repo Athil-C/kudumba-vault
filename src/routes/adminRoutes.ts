@@ -710,21 +710,22 @@ adminRouter.post('/users/:id/delete', async (req, res) => {
 /* ==========================================================================
    3. FAMILIES (/api/admin/families)
    ========================================================================== */
-adminRouter.get('/families', async (req, res) => {
+adminRouter.get('/families', searchRateLimiter, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
-    const search = (req.query.search as string || '').trim();
+    const search = (req.query.search as string || '').trim().slice(0, 100);
 
     // Group household members by ownerId to discover families
     const distinctOwners = await HouseholdMember.distinct('ownerId');
 
     const userQuery: any = { _id: { $in: distinctOwners } };
     if (search) {
+      const safeSearch = sanitizeSearchRegex(search);
       userQuery.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { familyName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { familyName: { $regex: safeSearch, $options: 'i' } },
+        { email: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 
@@ -1007,19 +1008,20 @@ adminRouter.get('/billing', async (req, res) => {
 /* ==========================================================================
    6. DOCUMENT MANAGEMENT (/api/admin/documents)
    ========================================================================== */
-adminRouter.get('/documents', async (req, res) => {
+adminRouter.get('/documents', searchRateLimiter, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
     const category = (req.query.category as string || '').trim();
-    const search = (req.query.search as string || '').trim();
+    const search = (req.query.search as string || '').trim().slice(0, 100);
 
     const query: any = { deletedAt: { $exists: false } };
     if (category) query.category = category;
     if (search) {
+      const safeSearch = sanitizeSearchRegex(search);
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { fileName: { $regex: search, $options: 'i' } },
+        { title: { $regex: safeSearch, $options: 'i' } },
+        { fileName: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 

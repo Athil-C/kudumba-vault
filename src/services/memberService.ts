@@ -137,6 +137,10 @@ export function _resetMockMembers(): void {
   mockMemberStore.clear();
 }
 
+export function getMockMember(memberId: string): any {
+  return mockMemberStore.get(memberId);
+}
+
 function isMockDb(): boolean {
   return !isDbReady() && (process.env.ALLOW_MOCK_DB === 'true' || process.env.NODE_ENV === 'test');
 }
