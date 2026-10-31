@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Kudumba Vault — Private Household Vault",
+  "short_name": "KudumbaVault",
+  "description": "Everything your family needs to find in 10 seconds, with alerts before anything expires.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#EA4C46",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

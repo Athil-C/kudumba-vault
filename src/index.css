@@ -1,0 +1,337 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-coral: #FF4B55;
+  --color-brand-coral-deep: #E03A45;
+  --color-brand-coral-hover: #C42F3A;
+  --color-brand-yellow: #EFC94C;
+  --color-brand-blue: #1E4FD8;
+  --color-ink: #0B0B0C;
+  --color-canvas: #FFFFFF;
+  --color-card: #F4F5F7;
+  --color-card-border: #E6E8EC;
+  --color-text-muted: #5B6168;
+
+  --color-status-expired-text: #B3121F;
+  --color-status-expired-bg: #FDECEE;
+  --color-status-due-text: #A85A00;
+  --color-status-due-bg: #FFF4D6;
+  --color-status-valid-text: #0F7B3E;
+  --color-status-valid-bg: #E4F7EC;
+
+  /* Kudumba Vault Heritage & SaaS Brand Tokens */
+  --color-vault-brown: #6F4E37;
+  --color-vault-brown-dark: #4A3425;
+  --color-vault-brown-deep: #2F2118;
+  --color-vault-gold: #C8A46B;
+  --color-vault-gold-light: #DFCA9B;
+  --color-vault-gold-pale: #FBF7EE;
+  --color-vault-cream: #FAF7F2;
+  --color-vault-cream-surface: #F5EFE6;
+  --color-vault-emerald: #10B981;
+  --color-vault-emerald-dark: #047857;
+  --color-vault-emerald-light: #ECFDF5;
+
+  /* Festie Hero & Welcome Theme Tokens */
+  --color-festRed: #FF4C54;
+  --color-festRedDark: #E93C44;
+  --color-festYellow: #F7D038;
+  --color-festMonitorYellow: #FFD12E;
+  --color-festBlack: #050505;
+  --color-festGrayCard: #F8F8F7;
+  --font-anton: 'Anton', 'Impact', sans-serif;
+
+  --radius-pill: 999px;
+  --radius-card: 22px;
+  --radius-banner: 28px;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Malayalam', 'Anek Malayalam', sans-serif;
+}
+
+:root {
+  --brand-coral: #FF4B55;
+  --brand-coral-deep: #E03A45;
+  --brand-coral-hover: #C42F3A;
+  --brand-yellow: #EFC94C;
+  --brand-blue: #1E4FD8;
+  --ink: #0B0B0C;
+  --white: #FFFFFF;
+
+  /* Surfaces */
+  --canvas: #FFFFFF;
+  --card: #F4F5F7;
+  --card-border: #E6E8EC;
+  --text-muted: #5B6168;
+
+  /* Status Tokens */
+  --status-expired-text: #B3121F;
+  --status-expired-bg: #FDECEE;
+  --status-due-text: #A85A00;
+  --status-due-bg: #FFF4D6;
+  --status-valid-text: #0F7B3E;
+  --status-valid-bg: #E4F7EC;
+
+  /* Kudumba Vault Heritage & SaaS Brand Tokens */
+  --vault-brown: #6F4E37;
+  --vault-brown-dark: #4A3425;
+  --vault-brown-deep: #2F2118;
+  --vault-gold: #C8A46B;
+  --vault-gold-light: #DFCA9B;
+  --vault-gold-pale: #FBF7EE;
+  --vault-cream: #FAF7F2;
+  --vault-cream-surface: #F5EFE6;
+  --vault-emerald: #10B981;
+  --vault-emerald-dark: #047857;
+  --vault-emerald-light: #ECFDF5;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Malayalam', 'Anek Malayalam', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  background-color: var(--canvas);
+  color: var(--ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Malayalam typography paired cleanly with 14px base */
+.font-ml,
+.font-malayalam {
+  font-family: 'Noto Sans Malayalam', 'Anek Malayalam', 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+}
+
+.font-ml-display {
+  font-family: 'Noto Sans Malayalam', 'Anek Malayalam', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.018em;
+}
+
+/* Headings with tight, modern SaaS tracking matching the reference */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+}
+
+/* Tabular figures for numbers and rupee amounts */
+.font-mono-tabular,
+.tabular-nums {
+  font-family: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Malayalam', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gentle spring micro-interaction on buttons and cards */
+.spring-interactive {
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.spring-interactive:hover {
+  transform: translateY(-1px);
+}
+
+.spring-interactive:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Mascot gentle float animation */
+@keyframes mascotFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.mascot-bounce {
+  animation: mascotFloat 3.6s ease-in-out infinite;
+}
+
+/* Subtle, polished hero float for badge accent */
+@keyframes heroBadgeFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.hero-float-subtle {
+  animation: heroBadgeFloat 4s ease-in-out infinite;
+}
+
+/* Visible 2px focus ring for keyboard accessibility */
+:focus-visible {
+  outline: 2px solid var(--brand-coral-deep);
+  outline-offset: 2px;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mascot-bounce {
+    animation: none !important;
+  }
+  .hero-float-subtle {
+    animation: none !important;
+  }
+  .spring-interactive:hover {
+    transform: none !important;
+  }
+}
+
+/* =========================================================================
+   FESTIE HERO & WELCOME PAGE DESIGN SYSTEM
+   ========================================================================= */
+
+/* 1. Exact Festie Coral-Red Background with Vertical Wavy Topographic Lines */
+.festie-red-topo {
+  background-color: #FF4C54;
+  background-image: url("data:image/svg+xml,%3Csvg width='600' height='700' viewBox='0 0 600 700' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='rgba(255,255,255,0.09)' stroke-width='1.15' fill='none'%3E%3Cpath d='M25 0 C55 140, -10 280, 35 420 C65 530, 10 620, 25 700'/%3E%3Cpath d='M75 0 C45 150, 110 290, 65 440 C40 540, 95 630, 75 700'/%3E%3Cpath d='M130 0 C165 130, 95 260, 140 410 C170 520, 110 610, 130 700'/%3E%3Cpath d='M185 0 C155 160, 215 300, 175 450 C150 550, 205 640, 185 700'/%3E%3Cpath d='M245 0 C280 120, 210 270, 255 420 C285 530, 225 615, 245 700'/%3E%3Cpath d='M305 0 C275 150, 335 285, 295 435 C270 545, 325 635, 305 700'/%3E%3Cpath d='M365 0 C400 135, 330 275, 375 425 C405 535, 345 620, 365 700'/%3E%3Cpath d='M425 0 C395 155, 455 295, 415 445 C390 555, 445 645, 425 700'/%3E%3Cpath d='M485 0 C520 140, 450 280, 495 430 C525 540, 465 625, 485 700'/%3E%3Cpath d='M545 0 C515 165, 575 305, 535 455 C510 560, 565 650, 545 700'/%3E%3Cpath d='M585 0 C610 145, 560 285, 590 435 C610 540, 570 630, 585 700'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 600px 700px;
+}
+
+/* 2. Massive Ultra-Condensed Festie Headline Typography */
+.festie-hero-title {
+  font-family: 'Anton', Impact, sans-serif;
+  text-transform: uppercase;
+  line-height: 0.91;
+  letter-spacing: -0.015em;
+}
+
+/* 3. Smooth Floating Animations for Mascot & Trophy */
+@keyframes floatMascot {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-10px) rotate(1.5deg); }
+}
+@keyframes floatTrophy {
+  0%, 100% { transform: translateY(0px) rotate(8deg); }
+  50% { transform: translateY(-9px) rotate(4deg); }
+}
+.mascot-float {
+  animation: floatMascot 5s ease-in-out infinite;
+}
+.trophy-float {
+  animation: floatTrophy 5.5s ease-in-out infinite;
+}
+
+/* 4. 3D Yellow Monitor Perspective */
+.festie-monitor-scene {
+  perspective: 1300px;
+}
+.festie-monitor-box {
+  transform: rotateY(-18deg) rotateX(3deg);
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #FFD12E;
+  border-radius: 22px;
+  box-shadow: 
+    18px 10px 0px #F5B400,
+    22px 14px 0px #D99B00,
+    0px 30px 50px rgba(120, 10, 18, 0.38);
+}
+.festie-monitor-scene:hover .festie-monitor-box {
+  transform: rotateY(-11deg) rotateX(1.5deg) scale(1.015);
+}
+
+/* 5. Staggered Bento Cards with Top & Bottom Fade Mask */
+.bento-fade-mask {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+.festie-bento-card {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 22px;
+  backdrop-filter: blur(6px);
+  transition: all 0.25s ease;
+}
+.festie-bento-card:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px rgba(140, 12, 20, 0.22);
+}
+
+/* 6. 3-Row Pill Marquee with Left/Right Soft Fade */
+.pill-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 9%, black 91%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 9%, black 91%, transparent 100%);
+}
+@keyframes scrollLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes scrollRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+.track-left {
+  display: flex;
+  width: max-content;
+  animation: scrollLeft 42s linear infinite;
+}
+.track-right {
+  display: flex;
+  width: max-content;
+  animation: scrollRight 46s linear infinite;
+}
+.track-left:hover, .track-right:hover {
+  animation-play-state: paused;
+}
+
+/* 7. Exact Festie Pricing Card Styles */
+.pricing-card-base {
+  border-radius: 26px;
+  background: #FFFFFF;
+  border: 1.5px solid #EAE8E8;
+  transition: all 0.25s ease;
+}
+.pricing-card-pro {
+  border-radius: 26px;
+  background: linear-gradient(180deg, #FFF0F1 0%, #FFFFFF 24%, #FFFFFF 100%);
+  border: 1.5px solid #FFB8BC;
+  box-shadow: 0 20px 50px rgba(255, 76, 84, 0.08);
+}
+.pricing-card-ultra {
+  border-radius: 26px;
+  background: #FFFFFF;
+  border: 1.5px solid #FFD6D8;
+}
+
+/* 8. Giant Clipped Metallic Footer Text */
+.festie-metallic-word {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.78;
+  background: linear-gradient(180deg, #D8D8D8 0%, #9E9E9E 42%, #3A3A3A 78%, #0E0E0E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  user-select: none;
+}
+
+/* Hide scrollbar for edge-to-edge testimonial track */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

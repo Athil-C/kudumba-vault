@@ -1,0 +1,6 @@
+{
+  "summary":  "Updated Kudumba Vault architecture and Phase (a) execution plan incorporating V1 scope streamlining, Supabase/Cron cost-optimized stack, Malayalam-first i18n, new Kerala household modules (NRI Document Requests, Kuri Tracker, House Construction Tracker, Domestic Helper Salary Ledger), technical risk analysis of the architectural changes, and Phase (a)-first build gate.",
+  "updatedAt":  "2026-10-25T09:43:23.441145125Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

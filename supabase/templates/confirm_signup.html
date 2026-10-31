@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Kudumba Vault Verification Code</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F4F5F7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #0B0B0C;
+      -webkit-font-smoothing: antialiased;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #F4F5F7;
+      padding: 40px 0 40px 0;
+    }
+    .main-card {
+      background-color: #FFFFFF;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 560px;
+      border-radius: 24px;
+      border: 1px solid #E6E8EC;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+    .header-banner {
+      background-color: #FFF5F5;
+      border-bottom: 1px solid #FEE2E2;
+      padding: 32px 36px 24px 36px;
+      text-align: center;
+    }
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #E03A45;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+    }
+    .brand-subtitle {
+      font-size: 13px;
+      color: #5B6168;
+      margin: 0;
+      font-weight: 500;
+    }
+    .body-content {
+      padding: 36px 36px 28px 36px;
+    }
+    .greeting {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0B0B0C;
+      margin: 0 0 12px 0;
+    }
+    .instruction-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #5B6168;
+      margin: 0 0 24px 0;
+    }
+    .code-container {
+      background-color: #F8F9FA;
+      border: 2px dashed #E03A45;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      margin: 24px 0;
+    }
+    .code-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #E03A45;
+      margin-bottom: 8px;
+    }
+    .otp-code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: #0B0B0C;
+      margin: 0;
+    }
+    .expiry-notice {
+      font-size: 12.5px;
+      color: #8C939D;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .security-callout {
+      background-color: #FFFBEB;
+      border-left: 4px solid #F59E0B;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 24px 0 16px 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #92400E;
+    }
+    .footer {
+      background-color: #FAFAFA;
+      border-top: 1px solid #F0F2F5;
+      padding: 20px 36px;
+      text-align: center;
+      font-size: 11.5px;
+      color: #8C939D;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table role="presentation" class="main-card" align="center" cellpadding="0" cellspacing="0">
+      <!-- Brand Header -->
+      <tr>
+        <td class="header-banner">
+          <div class="brand-title">Kudumba Vault</div>
+          <div class="brand-subtitle">കുടുംബ സുരക്ഷാ വോൾട്ട് &bull; Secure Family Document Vault</div>
+        </td>
+      </tr>
+
+      <!-- Body Content -->
+      <tr>
+        <td class="body-content">
+          <div class="greeting">Verify your email address</div>
+          <p class="instruction-text">
+            Thank you for registering your family account with Kudumba Vault. To ensure that your family documents remain strictly private and accessible only by you, please enter the following 6-digit verification code:
+          </p>
+
+          <!-- 6-Digit OTP Token Box -->
+          <div class="code-container">
+            <div class="code-label">Verification Code / സ്ഥിരീകരണ കോഡ്</div>
+            <div class="otp-code">{{ .Token }}</div>
+            <div class="expiry-notice">
+              ⏱ Valid for 5 minutes (or your configured expiration) &bull; 5 മിനിറ്റ് സാധുത
+            </div>
+          </div>
+
+          <p class="instruction-text" style="font-size: 13px; color: #5B6168; margin-top: 16px;">
+            നിങ്ങളുടെ കുടുംബ അക്കൗണ്ട് സ്ഥിരീകരിക്കാൻ മുകളിൽ നൽകിയിരിക്കുന്ന 6 അക്ക കോഡ് Kudumba Vault-ൽ രേഖപ്പെടുത്തുക.
+          </p>
+
+          <div class="security-callout">
+            <strong>Security Notice:</strong> Never share this verification code with anyone. Kudumba Vault support staff will never ask for your code or password. If you did not create this account, you can safely ignore this email.
+          </div>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td class="footer">
+          &copy; Kudumba Vault &bull; Private & Encrypted Family Document Management<br>
+          Automated security dispatch via Supabase Auth &bull; Do not reply to this email.
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

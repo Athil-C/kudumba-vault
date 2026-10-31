@@ -1,0 +1,361 @@
+// prisma/schema.prisma
+// Kudumba Vault — Streamlined V1 Multi-Tenant Schema with Kerala Household Trackers
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum Visibility {
+  SHARED
+  PRIVATE
+}
+
+enum DocCategory {
+  IDENTITY
+  VEHICLE
+  PROPERTY
+  MEDICAL
+  INSURANCE
+  LOANS_GOLD
+  WARRANTY
+  GULF_DOCS
+  OTHER
+}
+
+enum ReminderChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum ReminderStatus {
+  QUEUED
+  SENT
+  FAILED
+  DLQ
+}
+
+model RegionConfig {
+  id            String         @id @default(cuid())
+  code          String         @unique // KL-IN, UAE, KSA, QAT, OMN, KWT, BHR
+  nameEn        String
+  nameMl        String
+  documentTypes DocumentType[]
+}
+
+model DocumentType {
+  id                String       @id @default(cuid())
+  code              String       @unique
+  category          DocCategory
+  nameEn            String
+  nameMl            String
+  regionCode        String       @default("KL-IN")
+  region            RegionConfig @relation(fields: [regionCode], references: [code])
+  hasExpiry         Boolean      @default(true)
+  isSensitiveId     Boolean      @default(false)
+  maskFirst8Digits  Boolean      @default(false)
+  renewalPortalName String?
+  renewalPortalUrl  String?
+  defaultRemindDays Int[]        @default([60, 30, 7, 1])
+}
+
+model Tenant {
+  id               String               @id @default(cuid())
+  name             String
+  planCode         String               @default("FOUNDING_FREE")
+  regionCode       String               @default("KL-IN")
+  storageUsedBytes BigInt               @default(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  members          TenantMember[]
+  people           PersonProfile[]
+  documents        Document[]
+  workers          WorkerContact[]
+  nriRequests      NriDocumentRequest[]
+  kuriTrackers     KuriTracker[]
+  constructionLogs ConstructionItem[]
+  helperLedgers    DomesticHelper[]
+  auditLogs        AuditLog[]
+}
+
+model User {
+  id            String          @id @default(cuid())
+  phone         String          @unique
+  email         String?         @unique
+  name          String
+  preferredLang String          @default("ml") // Malayalam default, English secondary
+  appPinHash    String?
+  notifyEmail   Boolean         @default(true)
+  notifySms     Boolean         @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime        @default(now())
+
+  memberships   TenantMember[]
+  sessions      DeviceSession[]
+  consents      ConsentRecord[]
+}
+
+model TenantMember {
+  id       String     @id @default(cuid())
+  tenantId String
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     MemberRole @default(VIEWER)
+  joinedAt DateTime   @default(now())
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+model PersonProfile {
+  id           String     @id @default(cuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  relationship String
+  isNriMember  Boolean    @default(false)
+  countryCode  String     @default("IN")
+  documents    Document[]
+
+  @@index([tenantId])
+}
+
+model Document {
+  id                String           @id @default(cuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  personId          String
+  person            PersonProfile    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdByUserId   String
+  docTypeCode       String
+  category          DocCategory
+  title             String
+  maskedNumber      String?          // First 8 digits masked for Aadhaar: XXXX-XXXX-4821
+  encryptedNumber   String?          // AES-256-GCM encrypted payload
+  expiryDate        DateTime?
+  nextReminderAt    DateTime?        // Indexed for serverless Cron polling
+  reminderLockUntil DateTime?        // Concurrency lock for Cron workers
+  visibility        Visibility       @default(SHARED)
+  notes             String?
+  tags              String[]
+  portalUrl         String?
+  deletedAt         DateTime?        // 30-day soft delete recovery
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  files             DocumentFile[]
+  renewals          RenewalHistory[]
+  reminderLogs      ReminderLog[]
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, nextReminderAt])
+}
+
+model DocumentFile {
+  id         String   @id @default(cuid())
+  tenantId   String
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  pageLabel  String
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, documentId])
+}
+
+model RenewalHistory {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  documentId         String
+  document           Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  previousExpiryDate DateTime
+  newExpiryDate      DateTime
+  renewedByUserId    String
+  amountPaidInr      Int?
+  notes              String?
+  renewedAt          DateTime @default(now())
+
+  @@index([tenantId, documentId])
+}
+
+model ReminderLog {
+  id                String          @id @default(cuid())
+  tenantId          String
+  documentId        String
+  document          Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  channel           ReminderChannel
+  triggerOffsetDays Int             // 60, 30, 7, 1, -7, -14
+  recipient         String
+  status            ReminderStatus
+  retryCount        Int             @default(0)
+  errorMessage      String?
+  sentAt            DateTime        @default(now())
+
+  @@unique([documentId, channel, triggerOffsetDays])
+  @@index([tenantId, sentAt])
+}
+
+model WorkerContact {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String
+  alternatePhone String?
+  trade          String
+  area           String
+  rating         Int          @default(5)
+  notes          String?
+  workRecords    WorkRecord[]
+
+  @@index([tenantId, trade])
+}
+
+model WorkRecord {
+  id        String        @id @default(cuid())
+  tenantId  String
+  workerId  String
+  worker    WorkerContact @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  title     String
+  workDate  DateTime
+  amountInr Int
+  isPaid    Boolean       @default(true)
+  notes     String?
+  photoKeys String[]
+
+  @@index([tenantId, workerId])
+}
+
+model NriDocumentRequest {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedByName     String
+  targetPersonName    String
+  docTypeCode         String
+  purposeNote         String
+  status              String   @default("PENDING")
+  fulfilledDocumentId String?
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model KuriTracker {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  organizer        String
+  monthlyAmountInr Int
+  totalMonths      Int
+  paidMonths       Int      @default(0)
+  nextDueDate      DateTime
+  isPrized         Boolean  @default(false)
+  notes            String?
+
+  @@index([tenantId])
+}
+
+model ConstructionItem {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stageTitle       String
+  contractorName   String?
+  amountInr        Int
+  paidAmountInr    Int       @default(0)
+  permitExpiryDate DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+model DomesticHelper {
+  id               String              @id @default(cuid())
+  tenantId         String
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String?
+  role             String
+  monthlySalaryInr Int
+  entries          HelperSalaryEntry[]
+
+  @@index([tenantId])
+}
+
+model HelperSalaryEntry {
+  id              String         @id @default(cuid())
+  tenantId        String
+  helperId        String
+  helper          DomesticHelper @relation(fields: [helperId], references: [id], onDelete: Cascade)
+  monthLabel      String
+  salaryPaidInr   Int
+  advanceGivenInr Int            @default(0)
+  leaveDays       Int            @default(0)
+  paidOn          DateTime       @default(now())
+
+  @@index([tenantId, helperId])
+}
+
+model WaitlistLead {
+  id            String   @id @default(cuid())
+  name          String
+  phoneOrEmail  String
+  familyType    String   // KERALA_RESIDENT, GULF_NRI, PARTNER_CA_SOCIETY
+  districtOrCountry String
+  preferredLang String   @default("ml")
+  createdAt     DateTime @default(now())
+}
+
+model DeviceSession {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName   String
+  ipAddress    String
+  lastActiveAt DateTime  @default(now())
+  revokedAt    DateTime?
+}
+
+model ConsentRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId      String
+  purpose       String
+  policyVersion String   @default("v1.0-DPDP-2023")
+  granted       Boolean
+  recordedAt    DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}

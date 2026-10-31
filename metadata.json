@@ -1,0 +1,6 @@
+{
+  "name": "Kudumba Vault — Private Household Vault for Kerala & NRI Families",
+  "description": "Everything your family needs to find in 10 seconds, with alerts before anything expires. Bilingual Malayalam and English household document vault, expiry reminders, and workers book.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
