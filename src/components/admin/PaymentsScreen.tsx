@@ -487,7 +487,7 @@ export const PaymentsScreen: React.FC = () => {
                 type="text"
                 value={editWhatsapp}
                 onChange={(e) => setEditWhatsapp(e.target.value)}
-                placeholder="e.g. +91 90612 64525"
+                placeholder="e.g. +91 94470 00000"
                 className="w-full h-10 px-3 rounded-xl border border-[#E6E8EC] bg-[#FAFAFA] text-xs font-bold text-[#0B0B0C] focus:bg-white focus:outline-none focus:border-[#E03A45]"
                 required
               />

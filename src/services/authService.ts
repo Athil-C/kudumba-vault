@@ -57,6 +57,7 @@ export function generateAuthToken(
 ): string {
   const secret = getJwtSecret();
   const options: SignOptions = {
+    algorithm: 'HS256',
     expiresIn: expiresIn as any,
     issuer: 'kudumba-vault-api',
     audience: 'kudumba-vault-client',
@@ -72,6 +73,7 @@ export function verifyAuthToken(token: string): AuthUserPayload {
   const secret = getJwtSecret();
   try {
     const decoded = jwt.verify(token, secret, {
+      algorithms: ['HS256'],
       issuer: 'kudumba-vault-api',
       audience: 'kudumba-vault-client',
     }) as AuthUserPayload;

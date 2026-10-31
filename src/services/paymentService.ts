@@ -23,6 +23,7 @@ import { AdminAuditEvent } from '../models/AdminAuditEvent';
 import { AUTHORITATIVE_PLANS, getPlanConfig } from '../config/planConfig';
 import { getOrCreateUserSubscription, evaluateUserEntitlement } from './subscriptionService';
 import { buildUpiPaymentUri, generateQrSvg, generateQrDataUrl } from '../utils/qrCodeGenerator';
+import { verifyFileSignature } from './supabaseStorage';
 
 // Secure private storage directory for manual payment proof uploads
 export const PAYMENT_PROOFS_DIR = path.resolve(process.cwd(), 'uploads', 'payment-proofs');
@@ -146,7 +147,7 @@ export async function getUpiPaymentConfig(): Promise<IUpiConfig | any> {
       key: 'global_upi',
       upiId: process.env.ADMIN_UPI_ID || 'kudumbavault@oksbi',
       merchantName: process.env.ADMIN_UPI_MERCHANT_NAME || 'Kudumba Vault',
-      whatsappNumber: '+91 90612 64525',
+      whatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || process.env.VITE_WHATSAPP_SUPPORT_NUMBER || '+91 94470 00000',
       supportEmail: 'support@kudumbavault.com',
       isEnabled: true,
     });
@@ -353,6 +354,19 @@ export async function submitPaymentProof(
   }
 ): Promise<IPaymentRequest | any> {
   const isMockAllowed = isMockDbAllowed();
+
+  // Validate requestId format strictly to prevent path traversal
+  if (
+    !params.requestId ||
+    typeof params.requestId !== 'string' ||
+    !/^[a-zA-Z0-9_-]{1,64}$/.test(params.requestId) ||
+    params.requestId.includes('..') ||
+    params.requestId.includes('/') ||
+    params.requestId.includes('\\')
+  ) {
+    throw new Error('Invalid payment requestId format.');
+  }
+
   const cleanUtr = params.utrNumber ? params.utrNumber.trim().toUpperCase() : '';
 
   // 1. Validate UTR format
@@ -380,9 +394,14 @@ export async function submitPaymentProof(
   }
 
   let proofPath = params.file?.path || '';
-  const originalName = params.file?.originalname || 'payment_proof.png';
+  const rawBase = path.basename(params.file?.originalname || 'payment_proof.png');
+  const originalName = rawBase.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
   const mimeType = params.file?.mimetype || 'image/png';
-  const fileSize = params.file?.size || 1024;
+  const fileSize = params.file?.size || (params.file?.buffer ? params.file.buffer.length : 1024);
+
+  if (params.file && fileSize <= 0) {
+    throw new Error('Payment screenshot file is empty (0 bytes).');
+  }
 
   const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
   if (params.file && !allowedMimes.includes(mimeType)) {
@@ -392,11 +411,29 @@ export async function submitPaymentProof(
     throw new Error('Payment screenshot cannot exceed 5 MB.');
   }
 
+  // Validate binary magic-bytes signature if buffer is provided
+  if (params.file?.buffer) {
+    const sig = verifyFileSignature(params.file.buffer);
+    if (
+      !sig.valid ||
+      !sig.detectedMime ||
+      !['image/jpeg', 'image/png', 'image/webp'].includes(sig.detectedMime)
+    ) {
+      throw new Error(
+        'Disallowed or forged file signature. Payment proof must be a genuine PNG, JPEG, or WebP image.'
+      );
+    }
+  }
+
   // Save file to private upload dir if buffer provided
   if (params.file?.buffer) {
     const ext = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/webp' ? '.webp' : '.png';
-    const filename = `proof_${params.requestId}_${Date.now()}${ext}`;
+    const safeReqId = params.requestId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `proof_${safeReqId}_${Date.now()}${ext}`;
     const fullPath = path.join(PAYMENT_PROOFS_DIR, filename);
+    if (!path.normalize(fullPath).startsWith(PAYMENT_PROOFS_DIR)) {
+      throw new Error('Access denied: Invalid file path.');
+    }
     fs.writeFileSync(fullPath, params.file.buffer);
     proofPath = fullPath;
   }
@@ -413,13 +450,27 @@ export async function submitPaymentProof(
       throw new Error('This UTR / transaction reference number has already been submitted.');
     }
 
+    const existingAnywhere = await PaymentRequest.findById(params.requestId);
+    if (!existingAnywhere) {
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
+    }
+    if (existingAnywhere.userId.toString() !== userId.toString()) {
+      const err = new Error('Access denied: Payment request does not belong to the current user.');
+      (err as any).statusCode = 403;
+      throw err;
+    }
+
     const request = await PaymentRequest.findOne({
       _id: new Types.ObjectId(params.requestId),
       userId: new Types.ObjectId(userId),
     });
 
     if (!request) {
-      throw new Error('Payment request not found or does not belong to the current user.');
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
     }
     if (request.status !== 'PENDING') {
       throw new Error(`Cannot submit proof. Payment request is already ${request.status.toLowerCase()}.`);
@@ -447,10 +498,14 @@ export async function submitPaymentProof(
 
     const req = mockStore.get(params.requestId);
     if (!req) {
-      throw new Error('Payment request not found.');
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
     }
     if (req.userId.toString() !== userId) {
-      throw new Error('Payment request does not belong to the current user.');
+      const err = new Error('Access denied: Payment request does not belong to the current user.');
+      (err as any).statusCode = 403;
+      throw err;
     }
     if (req.status !== 'PENDING') {
       throw new Error(`Cannot submit proof. Payment request is already ${req.status.toLowerCase()}.`);
@@ -480,12 +535,26 @@ export async function cancelPaymentRequest(userId: string, requestId: string): P
   const isMockAllowed = isMockDbAllowed();
 
   if (mongoose.connection.readyState === 1 && Types.ObjectId.isValid(requestId)) {
+    const existingAnywhere = await PaymentRequest.findById(requestId);
+    if (!existingAnywhere) {
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
+    }
+    if (existingAnywhere.userId.toString() !== userId.toString()) {
+      const err = new Error('Access denied: Payment request does not belong to the current user.');
+      (err as any).statusCode = 403;
+      throw err;
+    }
+
     const request = await PaymentRequest.findOne({
       _id: new Types.ObjectId(requestId),
       userId: new Types.ObjectId(userId),
     });
     if (!request) {
-      throw new Error('Payment request not found.');
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
     }
     if (request.status !== 'PENDING') {
       throw new Error(`Cannot cancel payment request that is already ${request.status.toLowerCase()}.`);
@@ -497,10 +566,14 @@ export async function cancelPaymentRequest(userId: string, requestId: string): P
     const mockStore = getMockPaymentRequests();
     const req = mockStore.get(requestId);
     if (!req) {
-      throw new Error('Payment request not found.');
+      const err = new Error('Payment request not found.');
+      (err as any).statusCode = 404;
+      throw err;
     }
     if (req.userId.toString() !== userId) {
-      throw new Error('Payment request does not belong to the current user.');
+      const err = new Error('Access denied: Payment request does not belong to the current user.');
+      (err as any).statusCode = 403;
+      throw err;
     }
     if (req.status !== 'PENDING') {
       throw new Error(`Cannot cancel payment request that is already ${req.status.toLowerCase()}.`);
@@ -910,4 +983,73 @@ export async function rejectPaymentRequest(
   }
 
   throw new Error('Database service is currently unavailable.');
+}
+
+/**
+ * Authoritatively retrieves payment proof file for authorized viewing.
+ * Prevents IDOR: only the owning user or an ADMIN can view payment proof.
+ */
+export async function getPaymentProofFile(
+  userId: string,
+  requestId: string,
+  userRole?: string
+): Promise<{ filePath: string; mimeType: string; originalName: string }> {
+  if (
+    !requestId ||
+    typeof requestId !== 'string' ||
+    !/^[a-zA-Z0-9_-]{1,64}$/.test(requestId) ||
+    requestId.includes('..') ||
+    requestId.includes('/') ||
+    requestId.includes('\\')
+  ) {
+    throw new Error('Invalid payment request ID format.');
+  }
+
+  let request: any = null;
+  if (mongoose.connection.readyState === 1 && Types.ObjectId.isValid(requestId)) {
+    request = await PaymentRequest.findById(requestId);
+  } else if (isMockDbAllowed()) {
+    const mockStore = getMockPaymentRequests();
+    request = mockStore.get(requestId);
+  }
+
+  if (!request || !request.proofFilePath) {
+    const err = new Error('Payment screenshot not found.');
+    (err as any).statusCode = 404;
+    throw err;
+  }
+
+  // IDOR protection: only request owner or ADMIN
+  const requestUserId = (request.userId?._id || request.userId)?.toString();
+  if (requestUserId !== userId && userRole !== 'ADMIN') {
+    const err = new Error('Forbidden: You do not have permission to access this payment proof.');
+    (err as any).statusCode = 403;
+    throw err;
+  }
+
+  const filePath = path.isAbsolute(request.proofFilePath)
+    ? path.normalize(request.proofFilePath)
+    : path.resolve(process.cwd(), request.proofFilePath);
+
+  const allowedBase = path.resolve(process.cwd());
+  if (!filePath.startsWith(allowedBase) && !filePath.startsWith(PAYMENT_PROOFS_DIR)) {
+    const err = new Error('Access denied: Invalid file path.');
+    (err as any).statusCode = 403;
+    throw err;
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeMap: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  };
+  const mimeType = request.proofMimeType || mimeMap[ext] || 'image/png';
+
+  return {
+    filePath,
+    mimeType,
+    originalName: request.proofOriginalName || 'proof.png',
+  };
 }

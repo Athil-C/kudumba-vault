@@ -31,6 +31,7 @@ import { adminCancelSubscription } from '../services/subscriptionService';
 import { PaymentRequest } from '../models/PaymentRequest';
 import { UpiConfig, setMockUpiConfig } from '../models/UpiConfig';
 import { sanitizeSearchRegex } from '../utils/regexSanitizer';
+import { isValidObjectId, sanitizeErrorMessage } from '../utils/securityUtils';
 import {
   searchRateLimiter,
   adminReconcileConcurrencyLimiter,
@@ -483,7 +484,12 @@ adminRouter.post('/users/reconcile-all', adminReconcileConcurrencyLimiter, async
 adminRouter.post('/users/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, reason } = req.body;
+    const { status, reason } = req.body || {};
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ ok: false, error: 'Invalid user ID format.' });
+      return;
+    }
 
     if (!['ACTIVE', 'SUSPENDED'].includes(status)) {
       res.status(400).json({ ok: false, error: 'Invalid status. Must be ACTIVE or SUSPENDED.' });
@@ -514,14 +520,19 @@ adminRouter.post('/users/:id/status', async (req, res) => {
 
     res.json({ ok: true, user: updated });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to update user status';
-    res.status(500).json({ ok: false, error: msg });
+    const sanitized = sanitizeErrorMessage(err, 'Failed to update user status');
+    res.status(sanitized.statusCode).json({ ok: false, error: sanitized.message });
   }
 });
 
 adminRouter.delete('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ ok: false, error: 'Invalid user ID format.' });
+      return;
+    }
 
     // Safety: prevent super admin from deleting their own account
     if (id === req.user!.id) {
@@ -562,8 +573,9 @@ adminRouter.delete('/users/:id', async (req, res) => {
       Subscription.deleteMany({ userId: targetOwnerId }).catch(() => {}),
       Transaction.deleteMany({ userId: targetOwnerId }).catch(() => {}),
       supabaseUserId ? ConsumedResetToken.deleteMany({ supabaseUserId }).catch(() => {}) : Promise.resolve(),
-      DobLockout.deleteMany({ accountKey: { $regex: String(targetOwnerId) } }).catch(() => {}),
-      supabaseUserId ? DobLockout.deleteMany({ accountKey: { $regex: supabaseUserId } }).catch(() => {}) : Promise.resolve(),
+      DobLockout.deleteMany({
+        accountKey: { $in: [`dob:account:${targetOwnerId}`, ...(supabaseUserId ? [`dob:account:${supabaseUserId}`] : [])] },
+      }).catch(() => {}),
     ]);
 
     // 3. Delete user account record from User collection
@@ -618,6 +630,11 @@ adminRouter.post('/users/:id/delete', async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ ok: false, error: 'Invalid user ID format.' });
+      return;
+    }
+
     if (id === req.user!.id) {
       res.status(400).json({ ok: false, error: 'Administrators cannot delete their own account.' });
       return;
@@ -656,8 +673,9 @@ adminRouter.post('/users/:id/delete', async (req, res) => {
       Subscription.deleteMany({ userId: targetOwnerId }).catch(() => {}),
       Transaction.deleteMany({ userId: targetOwnerId }).catch(() => {}),
       supabaseUserId ? ConsumedResetToken.deleteMany({ supabaseUserId }).catch(() => {}) : Promise.resolve(),
-      DobLockout.deleteMany({ accountKey: { $regex: String(targetOwnerId) } }).catch(() => {}),
-      supabaseUserId ? DobLockout.deleteMany({ accountKey: { $regex: supabaseUserId } }).catch(() => {}) : Promise.resolve(),
+      DobLockout.deleteMany({
+        accountKey: { $in: [`dob:account:${targetOwnerId}`, ...(supabaseUserId ? [`dob:account:${supabaseUserId}`] : [])] },
+      }).catch(() => {}),
     ]);
 
     // 3. Delete user account record from User collection
@@ -902,6 +920,11 @@ adminRouter.post('/subscriptions/:id/cancel', async (req, res) => {
   try {
     const { mode, reason } = req.body || {};
     const subscriptionId = req.params.id;
+
+    if (!isValidObjectId(subscriptionId)) {
+      res.status(400).json({ ok: false, error: 'Invalid subscription ID format.' });
+      return;
+    }
 
     const result = await adminCancelSubscription(
       subscriptionId,
@@ -1265,6 +1288,12 @@ adminRouter.get('/security', async (req, res) => {
 adminRouter.post('/security/alerts/:id/acknowledge', async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ ok: false, error: 'Invalid alert ID format.' });
+      return;
+    }
+
     const alert = await SystemAlert.findByIdAndUpdate(
       id,
       {
@@ -1292,7 +1321,13 @@ adminRouter.post('/security/alerts/:id/acknowledge', async (req, res) => {
 adminRouter.post('/security/alerts/:id/resolve', async (req, res) => {
   try {
     const { id } = req.params;
-    const { notes } = req.body;
+
+    if (!isValidObjectId(id)) {
+      res.status(400).json({ ok: false, error: 'Invalid alert ID format.' });
+      return;
+    }
+
+    const { notes } = req.body || {};
     const alert = await SystemAlert.findByIdAndUpdate(
       id,
       {
@@ -1590,6 +1625,10 @@ adminRouter.get('/payments/:id/proof', async (req, res) => {
 // Admin Approve Payment Request & Activate Subscription
 adminRouter.post('/payments/:id/approve', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      res.status(400).json({ ok: false, error: 'Invalid payment request ID format.' });
+      return;
+    }
     const result = await approvePaymentRequest(req.user!.id, req.user!.email, req.params.id);
     await logAdminAction(
       req,
@@ -1619,6 +1658,10 @@ adminRouter.post('/payments/:id/approve', async (req, res) => {
 // Admin Reject Payment Request
 adminRouter.post('/payments/:id/reject', async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      res.status(400).json({ ok: false, error: 'Invalid payment request ID format.' });
+      return;
+    }
     const { reason } = req.body || {};
     if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
       res.status(400).json({
@@ -1659,8 +1702,12 @@ adminRouter.post('/payments/:id/reject', async (req, res) => {
 // Admin Cancel Active Subscription associated with an Approved Payment
 adminRouter.post('/payments/:id/cancel-subscription', async (req, res) => {
   try {
-    const { mode, reason } = req.body || {};
     const paymentId = req.params.id;
+    if (!isValidObjectId(paymentId)) {
+      res.status(400).json({ ok: false, error: 'Invalid payment ID format.' });
+      return;
+    }
+    const { mode, reason } = req.body || {};
     let targetUserId: string | null = null;
     let targetEmail: string | undefined = undefined;
 

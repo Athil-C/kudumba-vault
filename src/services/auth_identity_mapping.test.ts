@@ -10,7 +10,7 @@ import { requireAuth, assertDocumentOwnership } from '../middleware/auth';
 
 describe('Auth Identity Mapping & Mock DB Cast Error Fix', () => {
   const testSupabaseUid = 'c67f03a1-8816-4f67-bf11-cbfd6383c8d7';
-  const testEmail = 'athilchalil@gmail.com';
+  const testEmail = 'tester@kudumbavault.test';
 
   it('1. findOrCreateBySupabaseUser returns a valid MongoDB ObjectId and never a mock string', async () => {
     const user = await User.findOrCreateBySupabaseUser({

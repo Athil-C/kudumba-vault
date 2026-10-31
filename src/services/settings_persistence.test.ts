@@ -16,7 +16,7 @@ import { NotificationTracker } from './notificationTracker';
 
 describe('Settings Dashboard Dynamic Persistence & Security Test Suite', () => {
   const testUserId = '654321654321654321654321';
-  const testEmail = 'athilchalil@gmail.com';
+  const testEmail = 'tester@kudumbavault.test';
 
   beforeEach(() => {
     clearMockUserSettingsStore();

@@ -46,6 +46,7 @@ export function generateResetAuthToken(supabaseUserId: string, email: string): {
   };
 
   const options: SignOptions = {
+    algorithm: 'HS256',
     expiresIn,
     issuer: 'kudumba-vault-api',
     audience: 'kudumba-vault-recovery',
@@ -71,6 +72,7 @@ export function verifyResetAuthToken(
 
   try {
     const decoded = jwt.verify(token.trim(), secret, {
+      algorithms: ['HS256'],
       issuer: 'kudumba-vault-api',
       audience: 'kudumba-vault-recovery',
     }) as ResetAuthTokenPayload;

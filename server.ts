@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
@@ -14,9 +15,26 @@ import { checkAndDispatchDocumentExpiryNotification } from './src/services/expir
 import { connectDatabase, getDatabaseStatus, ensureDatabaseConnected, startAutoReconnectDaemon } from './src/config/db';
 import { registerUser, loginUser, getUserById } from './src/services/authService';
 import { requireAuth, householdAuth, extractTokenFromRequest } from './src/middleware/auth';
+import { requireSuperAdmin } from './src/middleware/adminAuth';
 import {
   authRateLimiter,
   dobRateLimiter,
+  emailActionRateLimiter,
+  uploadRateLimiter,
+  proofUploadRateLimiter,
+  downloadRateLimiter,
+  paymentRequestRateLimiter,
+  pricingRateLimiter,
+  waitlistRateLimiter,
+  contactRateLimiter,
+  searchRateLimiter,
+  cronRateLimiter,
+  generalApiRateLimiter,
+  sensitiveActionRateLimiter,
+  userUploadConcurrencyLimiter,
+  globalUploadConcurrencyLimiter,
+  proofUploadConcurrencyLimiter,
+  cronConcurrencyLimiter,
   checkAccountDobRateLimit,
   recordAccountDobFailure,
   clearAccountDobRateLimit,
@@ -41,7 +59,18 @@ import {
   cancelPaymentRequest,
   getUserCurrentPaymentStatus,
   getUpiPaymentConfig,
+  getPaymentProofFile,
 } from './src/services/paymentService';
+import {
+  verifyAndActivateRazorpayPayment,
+  processRazorpayWebhook,
+} from './src/services/razorpayService';
+import {
+  timingSafeCompare,
+  sanitizeErrorMessage,
+  sanitizeQueryString,
+  isValidObjectId,
+} from './src/utils/securityUtils';
 import {
   getBillingOverview,
   getBillingHistory,
@@ -57,6 +86,8 @@ import {
   generateDocumentDownloadUrl,
   updateDocumentMetadata,
   deleteDocument,
+  replaceDocumentFile,
+  isValidDocumentId,
   getExpiringDocuments,
   getUserStorageUsage,
 } from './src/services/documentService';
@@ -167,16 +198,30 @@ async function startServer() {
     next();
   });
 
+  // Protect all standard JSON endpoints from payload-based Denial-of-Service attacks
   // Preserve raw request body buffer for cryptographic webhook signature verification
   app.use(
     express.json({
-      limit: '25mb',
+      limit: '100kb',
       verify: (req: any, _res, buf) => {
         req.rawBody = buf;
       },
     })
   );
-  app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+  // Global request payload size limit error handler (HTTP 413)
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+      res.status(413).json({
+        ok: false,
+        error: 'Request payload is too large. Maximum allowed size is 100 KB.',
+        errorCode: 'PAYLOAD_TOO_LARGE',
+      });
+      return;
+    }
+    next(err);
+  });
 
   // Application performance measurement middleware for Real-Time diagnostics
   app.use(metricsMiddleware);
@@ -194,14 +239,11 @@ async function startServer() {
       defaultLocale: process.env.VITE_DEFAULT_LOCALE || 'ml',
       database: {
         connected: dbStatus.connected,
-        isMock: dbStatus.isMock,
-        sanitizedUri: dbStatus.sanitizedUri,
-        error: dbStatus.error,
+        status: dbStatus.connected ? 'connected' : dbStatus.isMock ? 'mock' : 'disconnected',
       },
       mailer: {
         configured: mailerStatus.configured,
         connected: mailerStatus.connected,
-        user: mailerStatus.user,
       },
       scheduler: {
         active: true,
@@ -222,7 +264,8 @@ async function startServer() {
     }
     try {
       const { name, email, password, role, preferredLang } = req.body || {};
-      const result = await registerUser({ name, email, password, role, preferredLang });
+      const safeRole = role === 'ADMIN' ? 'USER' : role || 'USER';
+      const result = await registerUser({ name, email, password, role: safeRole, preferredLang });
 
       const isProd = (process.env.NODE_ENV as string) === 'production';
       res.cookie('kv_token', result.token, {
@@ -284,7 +327,7 @@ async function startServer() {
   });
 
   // Current authenticated user profile
-  app.get('/api/auth/me', requireAuth, async (req, res) => {
+  app.get('/api/auth/me', generalApiRateLimiter, requireAuth, async (req, res) => {
     try {
       const isMockAllowed =
         process.env.NODE_ENV !== 'production' &&
@@ -351,7 +394,7 @@ async function startServer() {
   });
 
   // Profile synchronization with Date of Birth validation
-  app.post('/api/auth/sync-profile', async (req, res) => {
+  app.post('/api/auth/sync-profile', generalApiRateLimiter, async (req, res) => {
     const token = extractTokenFromRequest(req);
     if (!token) {
       res.status(401).json({ ok: false, error: 'Authentication required.' });
@@ -472,7 +515,7 @@ async function startServer() {
   });
 
   // Settings: Fetch authenticated user & household settings
-  app.get('/api/settings', householdAuth, async (req, res) => {
+  app.get('/api/settings', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
         res.status(401).json({ ok: false, error: 'Authentication required.' });
@@ -494,7 +537,7 @@ async function startServer() {
   });
 
   // Settings: Update household & profile settings
-  app.patch('/api/settings/profile', householdAuth, async (req, res) => {
+  app.patch('/api/settings/profile', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
         res.status(401).json({ ok: false, error: 'Authentication required.' });
@@ -526,7 +569,7 @@ async function startServer() {
   });
 
   // Settings: Update notification preferences
-  app.patch('/api/settings/notifications', householdAuth, async (req, res) => {
+  app.patch('/api/settings/notifications', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
         res.status(401).json({ ok: false, error: 'Authentication required.' });
@@ -552,7 +595,7 @@ async function startServer() {
   });
 
   // Settings: Update security preferences
-  app.patch('/api/settings/security', householdAuth, async (req, res) => {
+  app.patch('/api/settings/security', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       if (!req.user?.id) {
         res.status(401).json({ ok: false, error: 'Authentication required.' });
@@ -578,7 +621,7 @@ async function startServer() {
   });
 
   // Resend email verification
-  app.post('/api/auth/resend-verification', authRateLimiter, async (req, res) => {
+  app.post('/api/auth/resend-verification', emailActionRateLimiter, async (req, res) => {
     const { email } = req.body || {};
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       res.status(400).json({ ok: false, error: 'Valid email address is required.' });
@@ -606,7 +649,7 @@ async function startServer() {
   });
 
   // Request password reset foundation (Phase 1)
-  app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
+  app.post('/api/auth/forgot-password', emailActionRateLimiter, async (req, res) => {
     const { email, redirectTo } = req.body || {};
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       res.status(400).json({ ok: false, error: 'Valid email address is required.' });
@@ -834,17 +877,32 @@ async function startServer() {
     }
   });
 
-  // Multer memory storage configuration (25MB limit)
-  const upload = multer({
+  // Multer memory storage configuration (25MB limit with field size protections)
+  const documentUpload = multer({
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 25 * 1024 * 1024,
       files: 1,
+      fields: 25,
+      fieldSize: 64 * 1024,
     },
   });
 
+  // Dedicated Payment proof screenshot multer (5MB limit)
+  const proofUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024,
+      files: 1,
+      fields: 10,
+      fieldSize: 16 * 1024,
+    },
+  });
+
+  const upload = documentUpload;
+
   // Document Management Endpoints (Supports both Authenticated and Development Household Context)
-  app.get('/api/documents', householdAuth, async (req, res) => {
+  app.get('/api/documents', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const { category, status } = req.query as { category?: string; status?: string };
       const docs = await listUserDocuments(req.user!.id, {
@@ -859,7 +917,7 @@ async function startServer() {
   });
 
   // Storage Usage Accounting Endpoint (Single Source of Truth)
-  app.get('/api/documents/storage-usage', householdAuth, async (req, res) => {
+  app.get('/api/documents/storage-usage', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const entitlement = await evaluateUserEntitlement(req.user!.id);
       const stats = await getUserStorageUsage(req.user!.id, entitlement.storageQuotaBytes);
@@ -894,7 +952,7 @@ async function startServer() {
   });
 
   // Subscription & Free Trial Status
-  app.get('/api/subscription/status', householdAuth, async (req, res) => {
+  app.get('/api/subscription/status', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const entitlement = await evaluateUserEntitlement(req.user!.id);
       res.json({ ok: true, entitlement });
@@ -927,8 +985,8 @@ async function startServer() {
   // Manual UPI Payments & Subscription Checkout System
   // --------------------------------------------------------------------------
 
-  // 1. Calculate Authoritative Plan Price
-  app.post('/api/payments/calculate-price', householdAuth, async (req, res) => {
+  // 1. Calculate Authoritative Plan Price (Protected against coupon code brute forcing)
+  app.post('/api/payments/calculate-price', pricingRateLimiter, householdAuth, async (req, res) => {
     try {
       const { planId, duration, couponCode } = req.body || {};
       if (!planId) {
@@ -944,7 +1002,7 @@ async function startServer() {
   });
 
   // 2. Get Public Receiver UPI Config (UPI ID, merchant name, instructions)
-  app.get('/api/payments/config', householdAuth, async (_req, res) => {
+  app.get('/api/payments/config', generalApiRateLimiter, householdAuth, async (_req, res) => {
     try {
       const config = await getUpiPaymentConfig();
       res.json({
@@ -967,7 +1025,7 @@ async function startServer() {
   });
 
   // 3. Create Manual Payment Request
-  app.post('/api/payments/request', householdAuth, async (req, res) => {
+  app.post('/api/payments/request', paymentRequestRateLimiter, householdAuth, async (req, res) => {
     try {
       const { planId, duration, billingAddress, couponCode, saveBillingAddress } = req.body || {};
       if (!planId) {
@@ -1016,7 +1074,7 @@ async function startServer() {
   });
 
   // 4. Get Current Active Payment Status & Saved Billing Details
-  app.get('/api/payments/current', householdAuth, async (req, res) => {
+  app.get('/api/payments/current', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const status = await getUserCurrentPaymentStatus(req.user!.id);
       let upiUri = '';
@@ -1048,8 +1106,14 @@ async function startServer() {
     }
   });
 
-  // 5. Submit Payment Proof (UTR Number + Screenshot)
-  app.post('/api/payments/submit-proof', householdAuth, upload.single('proof'), async (req, res) => {
+  // 5. Submit Payment Proof (UTR Number + Screenshot with strict 5MB limit and concurrency control)
+  app.post(
+    '/api/payments/submit-proof',
+    householdAuth,
+    proofUploadRateLimiter,
+    proofUploadConcurrencyLimiter,
+    proofUpload.single('proof'),
+    async (req, res) => {
     try {
       const { requestId, utrNumber, paymentDate, remarks } = req.body || {};
       if (!requestId) {
@@ -1089,12 +1153,92 @@ async function startServer() {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('belong') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
+    }
+  });
+
+  // 7. Secure Payment Proof Viewing for Users (IDOR-Protected)
+  app.get('/api/payments/:id/proof', generalApiRateLimiter, householdAuth, async (req, res) => {
+    try {
+      const proofInfo = await getPaymentProofFile(req.user!.id, req.params.id, req.user!.role);
+      if (!fs.existsSync(proofInfo.filePath)) {
+        res.status(404).json({ ok: false, error: 'Payment screenshot not found on storage server.' });
+        return;
+      }
+      const safeFilename = proofInfo.originalName.replace(/[\r\n]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+      res.setHeader('Content-Type', proofInfo.mimeType);
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
+      const fileStream = fs.createReadStream(proofInfo.filePath);
+      fileStream.on('error', () => {
+        if (!res.headersSent) {
+          res.status(500).json({ ok: false, error: 'Failed to stream payment proof file.' });
+        }
+      });
+      fileStream.pipe(res);
+    } catch (err: any) {
+      const status = err.statusCode || (String(err?.message).includes('Forbidden') ? 403 : 400);
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(status).json({ ok: false, error: sanitized.message });
+    }
+  });
+
+  // 8. Razorpay Payment Verification & Activation (Server-side HMAC verification & replay defense)
+  app.post('/api/payments/razorpay/verify', paymentRequestRateLimiter, householdAuth, async (req, res) => {
+    try {
+      const { paymentId, orderId, subscriptionId, signature, planId, duration, couponCode } = req.body || {};
+      if (!paymentId || typeof paymentId !== 'string') {
+        res.status(400).json({ ok: false, error: 'paymentId is required.' });
+        return;
+      }
+      if (!signature || typeof signature !== 'string') {
+        res.status(400).json({ ok: false, error: 'signature is required.' });
+        return;
+      }
+      if (!planId || typeof planId !== 'string') {
+        res.status(400).json({ ok: false, error: 'planId is required.' });
+        return;
+      }
+
+      const result = await verifyAndActivateRazorpayPayment(req.user!.id, {
+        paymentId: paymentId.trim(),
+        orderId: orderId ? String(orderId).trim() : undefined,
+        subscriptionId: subscriptionId ? String(subscriptionId).trim() : undefined,
+        signature: signature.trim(),
+        planId: planId.trim(),
+        duration,
+        couponCode,
+      });
+
+      res.json(result);
+    } catch (err: unknown) {
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(sanitized.statusCode).json({ ok: false, error: sanitized.message });
+    }
+  });
+
+  // 9. Razorpay Webhook Event Processing (HMAC-SHA256 signature verification on rawBody & idempotency)
+  app.post('/api/payments/razorpay/webhook', async (req, res) => {
+    try {
+      const signature = req.headers['x-razorpay-signature'] as string;
+      if (!signature) {
+        res.status(400).json({ ok: false, error: 'Missing x-razorpay-signature header.' });
+        return;
+      }
+
+      const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+      const result = await processRazorpayWebhook(rawBody, signature);
+      res.json(result);
+    } catch (err: unknown) {
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(sanitized.statusCode).json({ ok: false, error: sanitized.message });
     }
   });
 
   // 6. Cancel User's Pending Payment Request
-  app.post('/api/payments/cancel', householdAuth, async (req, res) => {
+  app.post('/api/payments/cancel', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const { requestId } = req.body || {};
       if (!requestId) {
@@ -1105,7 +1249,8 @@ async function startServer() {
       res.json({ ok: true, message: 'Payment request cancelled.' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('belong') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
@@ -1114,7 +1259,7 @@ async function startServer() {
   // --------------------------------------------------------------------------
 
   // 1. Get Comprehensive Billing Overview
-  app.get('/api/billing/overview', householdAuth, async (req, res) => {
+  app.get('/api/billing/overview', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const overview = await getBillingOverview(req.user!.id);
       res.json({ ok: true, ...overview });
@@ -1125,7 +1270,7 @@ async function startServer() {
   });
 
   // 2. Get Paginated Invoices & Billing History
-  app.get('/api/billing/history', householdAuth, async (req, res) => {
+  app.get('/api/billing/history', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string, 10) || 1;
       const limit = parseInt(req.query.limit as string, 10) || 10;
@@ -1138,7 +1283,7 @@ async function startServer() {
   });
 
   // 3. Get Authorized Official Payment Receipt
-  app.get('/api/billing/receipts/:paymentId', householdAuth, async (req, res) => {
+  app.get('/api/billing/receipts/:paymentId', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const receipt = await getBillingReceipt(req.user!.id, req.params.paymentId);
       res.json({ ok: true, receipt });
@@ -1150,7 +1295,7 @@ async function startServer() {
   });
 
   // 4. Cancel / Schedule Cancellation of Subscription
-  app.post('/api/billing/cancel', householdAuth, async (req, res) => {
+  app.post('/api/billing/cancel', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const { cancelAtPeriodEnd = true, reason = '' } = req.body || {};
       const result = await cancelUserSubscription(req.user!.id, cancelAtPeriodEnd, reason);
@@ -1161,7 +1306,14 @@ async function startServer() {
     }
   });
 
-  app.post(['/api/documents', '/api/documents/upload'], householdAuth, upload.single('file'), async (req, res) => {
+  app.post(
+    ['/api/documents', '/api/documents/upload'],
+    householdAuth,
+    uploadRateLimiter,
+    userUploadConcurrencyLimiter,
+    globalUploadConcurrencyLimiter,
+    documentUpload.single('file'),
+    async (req, res) => {
     let quotaReservationId: string | undefined = undefined;
     try {
       if (!req.file) {
@@ -1273,11 +1425,12 @@ async function startServer() {
         releaseQuotaReservation(quotaReservationId);
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.get('/api/documents/expiring', householdAuth, async (req, res) => {
+  app.get('/api/documents/expiring', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const threshold = req.query.days ? parseInt(String(req.query.days), 10) : 60;
       const docs = await getExpiringDocuments(req.user!.id, threshold);
@@ -1288,8 +1441,12 @@ async function startServer() {
     }
   });
 
-  app.get('/api/documents/:id', householdAuth, async (req, res) => {
+  app.get('/api/documents/:id', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
+      if (!isValidDocumentId(req.params.id)) {
+        res.status(400).json({ ok: false, error: 'Invalid document ID format.' });
+        return;
+      }
       const doc = await getDocumentById(req.params.id, req.user!.id, req.user!.role);
       if (!doc) {
         res.status(404).json({ ok: false, error: 'Document not found.' });
@@ -1298,22 +1455,38 @@ async function startServer() {
       res.json({ ok: true, document: doc });
     } catch (err: any) {
       const status = err.statusCode || 400;
-      res.status(status).json({ ok: false, error: err.message || String(err) });
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(status).json({ ok: false, error: sanitized.message });
     }
   });
 
-  app.get('/api/documents/:id/download', householdAuth, async (req, res) => {
+  app.get('/api/documents/:id/download', downloadRateLimiter, householdAuth, async (req, res) => {
     try {
+      if (!isValidDocumentId(req.params.id)) {
+        res.status(400).json({ ok: false, error: 'Invalid document ID format.' });
+        return;
+      }
       const result = await generateDocumentDownloadUrl(req.params.id, req.user!.id, req.user!.role);
       res.json({ ok: true, ...result });
     } catch (err: any) {
       const status = err.statusCode || 400;
-      res.status(status).json({ ok: false, error: err.message || String(err) });
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(status).json({ ok: false, error: sanitized.message });
     }
   });
 
-  app.put('/api/documents/:id', householdAuth, async (req, res) => {
+  app.put('/api/documents/:id', sensitiveActionRateLimiter, householdAuth, upload.single('file'), async (req, res) => {
     try {
+      if (!isValidDocumentId(req.params.id)) {
+        res.status(400).json({ ok: false, error: 'Invalid document ID format.' });
+        return;
+      }
+
+      // If replacement file is attached, update storage object and binary properties
+      if (req.file) {
+        await replaceDocumentFile(req.params.id, req.user!.id, req.file, req.user!.role);
+      }
+
       const {
         title,
         titleMl,
@@ -1330,27 +1503,60 @@ async function startServer() {
         notes,
         renewalHistory,
       } = req.body || {};
-      const updated = await updateDocumentMetadata(
-        req.params.id,
-        req.user!.id,
-        {
-          title,
-          titleMl,
-          category,
-          categoryMl,
-          ownerNameEn,
-          ownerNameMl,
-          memberId,
-          authorityEn,
-          authorityMl,
-          docNumber,
-          expiryDate,
-          issuedAt,
-          notes,
-          renewalHistory,
-        },
-        req.user!.role
-      );
+
+      let parsedRenewalHistory = undefined;
+      if (typeof renewalHistory === 'string') {
+        try {
+          parsedRenewalHistory = JSON.parse(renewalHistory);
+        } catch {
+          // ignore parse error
+        }
+      } else if (Array.isArray(renewalHistory)) {
+        parsedRenewalHistory = renewalHistory;
+      }
+
+      const hasMetadataUpdates =
+        title !== undefined ||
+        category !== undefined ||
+        notes !== undefined ||
+        docNumber !== undefined ||
+        expiryDate !== undefined ||
+        issuedAt !== undefined ||
+        ownerNameEn !== undefined ||
+        ownerNameMl !== undefined ||
+        memberId !== undefined ||
+        authorityEn !== undefined ||
+        authorityMl !== undefined ||
+        titleMl !== undefined ||
+        categoryMl !== undefined ||
+        parsedRenewalHistory !== undefined;
+
+      let updated = null;
+      if (hasMetadataUpdates) {
+        updated = await updateDocumentMetadata(
+          req.params.id,
+          req.user!.id,
+          {
+            title,
+            titleMl,
+            category,
+            categoryMl,
+            ownerNameEn,
+            ownerNameMl,
+            memberId,
+            authorityEn,
+            authorityMl,
+            docNumber,
+            expiryDate,
+            issuedAt,
+            notes,
+            renewalHistory: parsedRenewalHistory,
+          },
+          req.user!.role
+        );
+      } else {
+        updated = await getDocumentById(req.params.id, req.user!.id, req.user!.role);
+      }
 
       // Notification Hook: Recalculate expiry status and notification eligibility if expiryDate is present (Case E)
       if (updated && updated.expiryDate) {
@@ -1378,12 +1584,17 @@ async function startServer() {
       res.json({ ok: true, document: updated });
     } catch (err: any) {
       const status = err.statusCode || 400;
-      res.status(status).json({ ok: false, error: err.message || String(err) });
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(status).json({ ok: false, error: sanitized.message });
     }
   });
 
-  app.delete('/api/documents/:id', householdAuth, async (req, res) => {
+  app.delete('/api/documents/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
+      if (!isValidDocumentId(req.params.id)) {
+        res.status(400).json({ ok: false, error: 'Invalid document ID format.' });
+        return;
+      }
       const result = await deleteDocument(req.params.id, req.user!.id, req.user!.role);
       let storageStats: any = undefined;
       try {
@@ -1394,12 +1605,13 @@ async function startServer() {
       res.json({ ok: true, ...result, storageStats });
     } catch (err: any) {
       const status = err.statusCode || 400;
-      res.status(status).json({ ok: false, error: err.message || String(err) });
+      const sanitized = sanitizeErrorMessage(err);
+      res.status(status).json({ ok: false, error: sanitized.message });
     }
   });
 
   // Profile & Overview / Personal Details Endpoints
-  app.get('/api/profile', householdAuth, async (req, res) => {
+  app.get('/api/profile', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const memberId = (req.query.memberId as string) || undefined;
       const profile = await getMemberProfile(req.user!.id, memberId, {
@@ -1417,11 +1629,12 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.patch('/api/profile/overview', householdAuth, async (req, res) => {
+  app.patch('/api/profile/overview', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const targetMemberId = req.body.memberId;
       if (!targetMemberId) {
@@ -1453,11 +1666,12 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.patch('/api/profile/personal-details', householdAuth, async (req, res) => {
+  app.patch('/api/profile/personal-details', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const targetMemberId = req.body.memberId;
       if (!targetMemberId) {
@@ -1489,12 +1703,13 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
   // Household Member Endpoints
-  app.get('/api/members', householdAuth, async (req, res) => {
+  app.get('/api/members', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const ownerId = req.user!.id;
       const [members, currentSeats, entitlement] = await Promise.all([
@@ -1515,7 +1730,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/members', householdAuth, async (req, res) => {
+  app.post('/api/members', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const member = await createMember(
         req.user!.id,
@@ -1554,11 +1769,12 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.post('/api/members/:id/accept-invitation', householdAuth, async (req, res) => {
+  app.post('/api/members/:id/accept-invitation', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const member = await acceptMemberInvitation(
         req.user!.id,
@@ -1572,7 +1788,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/members/:id', householdAuth, async (req, res) => {
+  app.put('/api/members/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const updated = await updateMember(
         req.user!.id,
@@ -1601,11 +1817,12 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.delete('/api/members/:id', householdAuth, async (req, res) => {
+  app.delete('/api/members/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const result = await deleteMember(
         req.user!.id,
@@ -1623,12 +1840,13 @@ async function startServer() {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
   // Service Worker Directory Endpoints
-  app.get('/api/workers', householdAuth, async (req, res) => {
+  app.get('/api/workers', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const workers = await listWorkers(req.user!.id);
       res.json({ ok: true, count: workers.length, workers });
@@ -1638,38 +1856,41 @@ async function startServer() {
     }
   });
 
-  app.post('/api/workers', householdAuth, async (req, res) => {
+  app.post('/api/workers', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const worker = await createWorker(req.user!.id, req.body);
       res.status(201).json({ ok: true, worker });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.put('/api/workers/:id', householdAuth, async (req, res) => {
+  app.put('/api/workers/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const updated = await updateWorker(req.user!.id, req.params.id, req.body);
       res.json({ ok: true, worker: updated });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.delete('/api/workers/:id', householdAuth, async (req, res) => {
+  app.delete('/api/workers/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const result = await deleteWorker(req.user!.id, req.params.id);
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
   // Share Pack Endpoints
-  app.get('/api/share-packs', householdAuth, async (req, res) => {
+  app.get('/api/share-packs', generalApiRateLimiter, householdAuth, async (req, res) => {
     try {
       const packs = await listSharePacks(req.user!.id);
       res.json({ ok: true, count: packs.length, sharePacks: packs });
@@ -1679,54 +1900,88 @@ async function startServer() {
     }
   });
 
-  app.post('/api/share-packs', householdAuth, async (req, res) => {
+  app.post('/api/share-packs', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const pack = await createSharePack(req.user!.id, req.body);
       res.status(201).json({ ok: true, sharePack: pack });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  app.delete('/api/share-packs/:id', householdAuth, async (req, res) => {
+  app.delete('/api/share-packs/:id', sensitiveActionRateLimiter, householdAuth, async (req, res) => {
     try {
       const result = await deleteSharePack(req.user!.id, req.params.id);
       res.json({ ok: true, ...result });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ ok: false, error: msg });
+      const statusCode = (err as any)?.statusCode || (msg.includes('Forbidden') || msg.includes('access denied') ? 403 : msg.includes('not found') ? 404 : 400);
+      res.status(statusCode).json({ ok: false, error: msg });
     }
   });
 
-  // Secure Administrative Diagnostics & Tracking (Protected by Cron Secret / Admin Token)
-  app.get('/api/admin/notifications', (req, res) => {
+  function timingSafeTokenCheck(provided: string, expected: string): boolean {
+    if (!provided || !expected || provided.length !== expected.length) {
+      return false;
+    }
+    try {
+      return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    } catch {
+      return false;
+    }
+  }
+
+  // Secure Administrative Diagnostics & Tracking (Protected by Cron Secret / Super Admin Token & Rate Limiter)
+  app.get('/api/admin/notifications', cronRateLimiter, async (req, res) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const cronSecret = (process.env.CRON_SECRET || '').trim();
 
-    if (cronSecret && token !== cronSecret) {
-      res.status(401).json({ error: 'Unauthorized: Invalid admin token' });
+    // Constant-time verification of CRON_SECRET token
+    if (timingSafeTokenCheck(token, cronSecret)) {
+      const records = notificationTracker.getAllRecords();
+      res.json({
+        ok: true,
+        total: records.length,
+        records: records.slice(-50), // Return recent 50
+      });
       return;
     }
 
-    const records = notificationTracker.getAllRecords();
-    res.json({
-      ok: true,
-      total: records.length,
-      records: records.slice(-50), // Return recent 50
+    // Deny access by default: require authenticated Super Admin
+    return requireSuperAdmin(req, res, () => {
+      const records = notificationTracker.getAllRecords();
+      res.json({
+        ok: true,
+        total: records.length,
+        records: records.slice(-50), // Return recent 50
+      });
     });
   });
 
-  // Scheduled Webhook / Manual Trigger for Serverless Cron Platforms (e.g. Vercel Cron, GitHub Actions)
-  app.post('/api/cron/expiry-check', async (req, res) => {
+  // Scheduled Webhook / Manual Trigger for Serverless Cron Platforms (Protected by Cron Secret / Super Admin with concurrency lock)
+  app.post('/api/cron/expiry-check', cronRateLimiter, cronConcurrencyLimiter, async (req, res) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const cronSecret = (process.env.CRON_SECRET || '').trim();
 
-    if (cronSecret && token !== cronSecret) {
-      res.status(401).json({ error: 'Unauthorized: Invalid CRON_SECRET token' });
-      return;
+    // Deny access by default: if CRON_SECRET is missing or token does not match in constant time, require Super Admin
+    if (!timingSafeTokenCheck(token, cronSecret)) {
+      return requireSuperAdmin(req, res, async () => {
+        try {
+          const report = await runSchedulerCycle();
+          res.json({
+            ok: true,
+            timestamp: new Date().toISOString(),
+            report,
+          });
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          res.status(500).json({ ok: false, error: message });
+        }
+      });
     }
 
     try {
@@ -1743,7 +1998,7 @@ async function startServer() {
   });
 
   // Data-driven Region & Document Type Catalog
-  app.get('/api/catalog', (_req, res) => {
+  app.get('/api/catalog', generalApiRateLimiter, (_req, res) => {
     res.json({
       regions: [
         { code: 'KL-IN', nameEn: 'Kerala, India', nameMl: 'കേരളം, ഇന്ത്യ' },
@@ -1754,14 +2009,14 @@ async function startServer() {
   });
 
   // Waitlist & Founding Household Registration
-  app.get('/api/waitlist', (_req, res) => {
+  app.get('/api/waitlist', generalApiRateLimiter, (_req, res) => {
     res.json({
       count: 146 + waitlistStore.length,
       recentLocations: ['Ernakulam', 'Dubai (UAE)', 'Kozhikode', 'Thrissur', 'Riyadh (KSA)'],
     });
   });
 
-  app.post('/api/waitlist', (req, res) => {
+  app.post('/api/waitlist', waitlistRateLimiter, (req, res) => {
     const check = validateWaitlistInput(req.body || {});
     if (!check.valid) {
       res.status(400).json({ error: check.errorEn, errorMl: check.errorMl });
@@ -1770,14 +2025,18 @@ async function startServer() {
 
     const record: WaitlistRecord = {
       id: `wl-${Date.now()}`,
-      name: String(req.body.name).trim(),
-      phoneOrEmail: String(req.body.phoneOrEmail).trim(),
+      name: String(req.body.name).trim().slice(0, 100),
+      phoneOrEmail: String(req.body.phoneOrEmail).trim().slice(0, 120),
       familyType: String(req.body.familyType || 'KERALA_RESIDENT'),
-      districtOrCountry: String(req.body.districtOrCountry).trim(),
+      districtOrCountry: String(req.body.districtOrCountry).trim().slice(0, 100),
       preferredLang: req.body.preferredLang === 'en' ? 'en' : 'ml',
       createdAt: new Date().toISOString(),
     };
     waitlistStore.push(record);
+    // Bounded memory protection against unbounded array growth / Out-of-Memory DoS
+    if (waitlistStore.length > 1000) {
+      waitlistStore.shift();
+    }
 
     res.status(201).json({
       ok: true,
@@ -1791,14 +2050,57 @@ async function startServer() {
     });
   });
 
-  // Contact Inquiry Endpoint (Zero PII leaked in console logs)
-  app.post('/api/contact', (req, res) => {
+  // Contact Inquiry Endpoint (Protected by rate limiting & strict string length bounds)
+  app.post('/api/contact', contactRateLimiter, (req, res) => {
     const { name, phoneOrEmail, message } = req.body || {};
     if (!name || !phoneOrEmail || !message) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
+    if (typeof name !== 'string' || name.trim().length > 100) {
+      res.status(400).json({ error: 'Name must not exceed 100 characters.' });
+      return;
+    }
+    if (typeof phoneOrEmail !== 'string' || phoneOrEmail.trim().length > 120) {
+      res.status(400).json({ error: 'Contact detail must not exceed 120 characters.' });
+      return;
+    }
+    if (typeof message !== 'string' || message.trim().length > 2000) {
+      res.status(400).json({ error: 'Message must not exceed 2000 characters.' });
+      return;
+    }
     res.status(201).json({ ok: true, receivedAt: new Date().toISOString() });
+  });
+
+  // Centralized Multer upload error handler (Returns HTTP 413 for size limit violations)
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(413).json({
+          ok: false,
+          error: 'Uploaded file exceeds maximum permitted size limit.',
+          errorCode: 'FILE_SIZE_LIMIT_EXCEEDED',
+        });
+        return;
+      }
+      res.status(400).json({
+        ok: false,
+        error: `File upload validation failed: ${err.message}`,
+        errorCode: 'FILE_UPLOAD_ERROR',
+      });
+      return;
+    }
+    next(err);
+  });
+
+  // Centralized unhandled application error handler (Strips database internals, hostnames, stack traces)
+  app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const sanitized = sanitizeErrorMessage(err);
+    console.error(`[UnhandledError] ${req.method} ${req.originalUrl}:`, err?.message || err);
+    res.status(sanitized.statusCode).json({
+      ok: false,
+      error: sanitized.message,
+    });
   });
 
   // SEO Sitemap & Robots.txt

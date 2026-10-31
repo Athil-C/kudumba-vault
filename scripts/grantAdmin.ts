@@ -2,9 +2,15 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const email = process.argv[2] || process.env.ADMIN_EMAIL || process.env.GMAIL_USER || 'athilchalil@gmail.com';
+const email = process.argv[2] || process.env.ADMIN_EMAIL || process.env.GMAIL_USER;
 
 async function main() {
+  if (!email) {
+    console.error('Error: Admin email must be specified as a command-line argument or via ADMIN_EMAIL / GMAIL_USER in .env');
+    console.error('Usage: npm run tsx scripts/grantAdmin.ts <user@example.com>');
+    process.exit(1);
+  }
+
   if (!process.env.MONGODB_URI) {
     console.error('Error: MONGODB_URI is not defined in .env');
     process.exit(1);

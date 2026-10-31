@@ -259,7 +259,7 @@ describe('Authoritative Free Trial Expiration, Entitlement Transition & Cron Aud
         mimetype: 'application/pdf',
         size: 80000,
       },
-      { title: 'Passport', category: 'PASSPORT' }
+      { title: 'Passport', category: 'IDENTITY' }
     );
     assert.ok(doc2?.id);
 

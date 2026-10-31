@@ -132,7 +132,7 @@ test('10. Duplicate notification prevention (Idempotency)', async () => {
     docs: [testDoc],
     members: [],
     tracker,
-    defaultRecipientEmail: 'athilchalil@gmail.com',
+    defaultRecipientEmail: 'alerts@kudumbavault.test',
     referenceDate: new Date('2026-03-02T03:30:00Z'),
   });
   assert.equal(report1.claimedCount, 1);
@@ -143,7 +143,7 @@ test('10. Duplicate notification prevention (Idempotency)', async () => {
     docs: [testDoc],
     members: [],
     tracker,
-    defaultRecipientEmail: 'athilchalil@gmail.com',
+    defaultRecipientEmail: 'alerts@kudumbavault.test',
     referenceDate: new Date('2026-03-02T03:30:00Z'),
   });
   assert.equal(report2.claimedCount, 0);
@@ -154,7 +154,7 @@ test('10. Duplicate notification prevention (Idempotency)', async () => {
 test('11. Bounded retry policy on failure', () => {
   const tracker = new NotificationTracker();
   const docId = 'doc-retry-test';
-  const email = 'athilchalil@gmail.com';
+  const email = 'alerts@kudumbavault.test';
   const milestone = 7;
   const expiry = '2026-04-01';
 
@@ -177,7 +177,7 @@ test('11. Bounded retry policy on failure', () => {
 test('12. Multiple concurrent workers claiming the same notification', () => {
   const tracker = new NotificationTracker();
   const docId = 'doc-concurrency-test';
-  const email = 'athilchalil@gmail.com';
+  const email = 'alerts@kudumbavault.test';
   const milestone = 1;
   const expiry = '2026-04-01';
 

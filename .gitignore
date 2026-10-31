@@ -2,8 +2,24 @@ node_modules/
 build/
 dist/
 coverage/
-uploads/
 .DS_Store
 *.log
 .env*
 !.env.example
+
+# Local runtime database backups & notification logs
+.data/
+scratch/
+.aistudio/
+
+# Sensitive user-uploaded documents and payment receipts
+uploads/*
+!uploads/.gitkeep
+
+# Cryptographic private keys and certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12

@@ -90,7 +90,7 @@ git push -u origin main
 | `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` | Your Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOi...` | Supabase public anon key |
 | `VITE_DEFAULT_LOCALE` | `ml` | Default UI locale (`ml` or `en`) |
-| `VITE_WHATSAPP_SUPPORT_NUMBER`| `919061264525` | Support WhatsApp contact |
+| `VITE_WHATSAPP_SUPPORT_NUMBER`| `919447000000` | Support WhatsApp contact (e.g. 91 + 10-digit number) |
 
 6. Click **Deploy**.
 7. Vercel will build the frontend in ~45 seconds and give you your production URL:

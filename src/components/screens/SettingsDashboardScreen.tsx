@@ -1425,7 +1425,7 @@ export const SettingsDashboardScreen: React.FC<SettingsDashboardScreenProps> = (
                     </div>
                     <div>
                       <p className="text-sm font-bold text-[#0B0B0C] break-all font-mono-tabular">
-                        {authUser?.email || 'athilchalil@gmail.com'}
+                        {authUser?.email || ''}
                       </p>
                       <p className="text-xs text-[#8A949E] mt-0.5">
                         {isVerified

@@ -1,12 +1,11 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose, { Types } from 'mongoose';
-import dotenv from 'dotenv';
 
-dotenv.config();
 process.env.NODE_ENV = 'test';
 process.env.ALLOW_MOCK_DB = 'true';
 process.env.ALLOW_MOCK_STORAGE = 'true';
+delete process.env.MONGODB_URI;
 
 import {
   listUserDocuments,
@@ -342,5 +341,10 @@ describe('Database Permissions, Access Controls & Cross-Tenant Isolation Suite',
         /not found|unauthorized/i
       );
     });
+  });
+
+  after(async () => {
+    const { disconnectDatabase } = await import('../config/db');
+    await disconnectDatabase();
   });
 });

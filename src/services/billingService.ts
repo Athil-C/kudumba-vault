@@ -314,7 +314,7 @@ export async function getBillingOverview(userId: string): Promise<BillingOvervie
 
   // 5. Build Notice Configuration (Requirement 8)
   const supportEmail = upiConfig?.supportEmail || 'support@kudumbavault.com';
-  const whatsappNumber = upiConfig?.whatsappNumber || '+91 90612 64525';
+  const whatsappNumber = upiConfig?.whatsappNumber || process.env.ADMIN_WHATSAPP_NUMBER || process.env.VITE_WHATSAPP_SUPPORT_NUMBER || '+91 94470 00000';
   let notice: BillingOverviewData['notice'] = null;
 
   if (upiConfig && !upiConfig.isEnabled) {

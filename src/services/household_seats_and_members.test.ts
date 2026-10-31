@@ -41,7 +41,7 @@ test('Kudumba Vault — Household Member Duplication, Seat Limits and Entitlemen
     assert.equal(normalizePhone('   '), undefined);
     assert.equal(normalizePhone(undefined), undefined);
 
-    assert.equal(normalizeEmail('  AthilChalil@Gmail.com  '), 'athilchalil@gmail.com');
+    assert.equal(normalizeEmail('  TesterVault@Gmail.com  '), 'testervault@gmail.com');
     assert.equal(normalizeEmail(''), undefined);
     assert.equal(normalizeEmail(undefined), undefined);
   });

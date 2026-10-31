@@ -30,6 +30,11 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
   const adminId = '507f1f77bcf86cd799439001';
   const adminEmail = 'admin@kudumbavault.com';
 
+  const samplePngBytes = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64'
+  );
+
   const defaultAddress = {
     fullName: 'Ananthu Namboodiri',
     houseBuilding: 'Illam 4B',
@@ -79,7 +84,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: req._id ? req._id.toString() : String(req.id),
       utrNumber: 'SBI2026103001',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'screenshot.jpg', mimetype: 'image/jpeg', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'screenshot.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
 
     const overview = await getBillingOverview(user1Id);
@@ -107,7 +112,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: reqId,
       utrNumber: 'HDFC2026103002',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'proof.png', mimetype: 'image/png', size: 2048, buffer: Buffer.from('test') },
+      file: { originalname: 'proof.png', mimetype: 'image/png', size: 2048, buffer: samplePngBytes },
     });
 
     // Admin approves payment
@@ -146,7 +151,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: req1Id,
       utrNumber: 'AXIS2026103001',
       paymentDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
-      file: { originalname: 'p1.png', mimetype: 'image/png', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'p1.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
     await approvePaymentRequest(adminId, adminEmail, req1Id);
 
@@ -161,7 +166,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: req2Id,
       utrNumber: 'AXIS2026103002',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'p2.png', mimetype: 'image/png', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'p2.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
     await approvePaymentRequest(adminId, adminEmail, req2Id);
 
@@ -186,7 +191,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: reqId,
       utrNumber: 'ICIC2026103003',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'p3.png', mimetype: 'image/png', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'p3.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
 
     // Admin rejects request
@@ -266,7 +271,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: reqId,
       utrNumber: 'KOTAK2026103099',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'proof.jpg', mimetype: 'image/jpeg', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'proof.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
     await approvePaymentRequest(adminId, adminEmail, reqId);
 
@@ -288,7 +293,7 @@ test('Kudumba Vault — Dynamic Billing Dashboard Test Suite', async (t) => {
       requestId: reqId,
       utrNumber: 'SECRET20261030',
       paymentDate: new Date().toISOString(),
-      file: { originalname: 'proof.jpg', mimetype: 'image/jpeg', size: 1024, buffer: Buffer.from('test') },
+      file: { originalname: 'proof.png', mimetype: 'image/png', size: 1024, buffer: samplePngBytes },
     });
     await approvePaymentRequest(adminId, adminEmail, reqId);
 

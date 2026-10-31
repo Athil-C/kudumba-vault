@@ -398,9 +398,10 @@ describe('Kudumba Vault — Profile Details Editing and Database Persistence Tes
             { requesterId: otherOwnerId, requesterRole: 'USER' }
           );
         },
-        {
-          name: 'Error',
-          message: 'Household member not found or access denied.',
+        (err: any) => {
+          assert.ok(err instanceof Error);
+          assert.match(err.message, /Access denied/);
+          return true;
         }
       );
     });

@@ -63,8 +63,38 @@ export function clearMockDocStore(): void {
   mockDocStore.clear();
 }
 
+export function getMockDocStore(): Map<string, any> {
+  return mockDocStore;
+}
+
 export function isDbReady(): boolean {
   return mongoose.connection.readyState === 1;
+}
+
+/**
+ * Validates that a referenced household member strictly belongs to the authenticated user.
+ * Prevents Insecure Direct Object Reference (IDOR) attacks across households.
+ */
+export async function verifyMemberBelongsToUser(memberId: string, userId: string): Promise<boolean> {
+  if (!memberId || !userId) return false;
+  if (isDbReady() && Types.ObjectId.isValid(memberId) && Types.ObjectId.isValid(userId)) {
+    const member = await HouseholdMemberModel.findOne({
+      _id: new Types.ObjectId(memberId),
+      ownerId: new Types.ObjectId(userId),
+      deletedAt: null,
+    }).select('_id').lean();
+    return Boolean(member);
+  }
+  if (process.env.NODE_ENV === 'test' || process.env.ALLOW_MOCK_DB === 'true') {
+    try {
+      const { getMockMember } = await import('./memberService');
+      const m = getMockMember(memberId);
+      if (m && !m.deletedAt && String(m.ownerId) === String(userId)) {
+        return true;
+      }
+    } catch {}
+  }
+  return false;
 }
 
 /**
@@ -220,6 +250,17 @@ export async function uploadAndCreateDocument(
     issuedAt = parsed;
   }
 
+  // IDOR Protection: Verify memberId belongs to the authenticated user's household
+  const rawMemberId = metadata.memberId ? String(metadata.memberId).trim() : undefined;
+  if (rawMemberId) {
+    const isMemberOwned = await verifyMemberBelongsToUser(rawMemberId, userId);
+    if (!isMemberOwned) {
+      const err = new Error('Forbidden: The specified household member does not belong to your account.');
+      (err as any).statusCode = 403;
+      throw err;
+    }
+  }
+
   // 3. Generate unpredictable private storage key
   const storagePath = generatePrivateStoragePath(userId, fileValidation.sanitizedFileName);
 
@@ -289,6 +330,7 @@ export async function uploadAndCreateDocument(
   if (process.env.NODE_ENV === 'test' || process.env.ALLOW_MOCK_DB === 'true') {
     const id = `mock-doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const mockDoc = {
+      _id: id,
       id,
       ownerId: userId,
       title,
@@ -473,7 +515,18 @@ export async function updateDocumentMetadata(
     patch.ownerNameMl = updates.ownerNameMl ? String(updates.ownerNameMl).trim() : undefined;
   }
   if (updates.memberId !== undefined) {
-    patch.memberId = updates.memberId ? String(updates.memberId).trim() : undefined;
+    const rawMemberId = updates.memberId ? String(updates.memberId).trim() : undefined;
+    if (rawMemberId) {
+      const isMemberOwned = await verifyMemberBelongsToUser(rawMemberId, userId);
+      if (!isMemberOwned) {
+        const err = new Error('Forbidden: The specified household member does not belong to your account.');
+        (err as any).statusCode = 403;
+        throw err;
+      }
+      patch.memberId = rawMemberId;
+    } else {
+      patch.memberId = undefined;
+    }
   }
   if (updates.authorityEn !== undefined) {
     patch.authorityEn = updates.authorityEn ? String(updates.authorityEn).trim() : undefined;
@@ -507,6 +560,123 @@ export async function updateDocumentMetadata(
     return updated;
   }
 
+  throw new Error('Database is unavailable.');
+}
+
+/**
+ * Replaces an existing document's file attachment.
+ * Enforces ownership (IDOR defense), magic-byte file signature validation,
+ * storage quota accounting, and compensating rollback on error.
+ */
+export async function replaceDocumentFile(
+  documentId: string,
+  userId: string,
+  file: {
+    originalname: string;
+    mimetype: string;
+    buffer: Buffer;
+    size?: number;
+  },
+  userRole?: string
+): Promise<any> {
+  const existingDoc = await getDocumentById(documentId, userId, userRole);
+  if (!existingDoc) {
+    const err = new Error('Document not found.');
+    (err as any).statusCode = 404;
+    throw err;
+  }
+
+  // 1. Validate replacement file (signature, magic bytes, extension, bounds)
+  const fileValidation = validateDocumentFile(file);
+  if (!fileValidation.valid || !fileValidation.mimeType) {
+    throw new Error(fileValidation.error || 'File validation failed.');
+  }
+
+  // 2. Storage quota check for delta size
+  const incomingSize = file.size ?? file.buffer.length;
+  const oldSize = existingDoc.fileSize || 0;
+  const deltaSize = Math.max(0, incomingSize - oldSize);
+
+  if (deltaSize > 0) {
+    const { validateUploadEntitlement } = await import('./subscriptionService');
+    const quotaCheck = await validateUploadEntitlement(userId, deltaSize);
+    if (!quotaCheck.allowed) {
+      const err = new Error(quotaCheck.reason || 'Storage quota exceeded.');
+      (err as any).statusCode = 403;
+      throw err;
+    }
+  }
+
+  // 3. Generate new unpredictable private storage key
+  const newStoragePath = generatePrivateStoragePath(userId, fileValidation.sanitizedFileName);
+
+  // 4. Upload replacement to private Supabase Storage
+  const uploadResult = await uploadDocumentToStorage(
+    newStoragePath,
+    file.buffer,
+    fileValidation.mimeType
+  );
+  if (!uploadResult.success) {
+    throw new Error(uploadResult.error || 'Failed to upload replacement file to secure storage.');
+  }
+
+  const oldStoragePath = existingDoc.storagePath;
+  const isDb = isDbReady();
+
+  if (isDb) {
+    try {
+      const updated = await DocumentModel.findByIdAndUpdate(
+        documentId,
+        {
+          $set: {
+            fileName: fileValidation.sanitizedFileName,
+            storagePath: newStoragePath,
+            mimeType: fileValidation.mimeType,
+            fileSize: incomingSize,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true, runValidators: true }
+      );
+
+      // Compensating deletion of old storage object after successful update
+      if (oldStoragePath && oldStoragePath !== newStoragePath) {
+        await deleteDocumentFromStorage(oldStoragePath).catch((delErr) => {
+          console.warn('[DocumentService] Notice: could not delete old storage object after replace:', delErr);
+        });
+      }
+
+      const json = updated?.toJSON() as any;
+      try {
+        const signed = await createDocumentSignedUrl(newStoragePath, 3600);
+        if (signed.success && signed.signedUrl) {
+          json.signedUrl = signed.signedUrl;
+          json.fileDataUrl = signed.signedUrl;
+        }
+      } catch {}
+      return json;
+    } catch (dbErr: unknown) {
+      // Compensating rollback: delete newly uploaded file to avoid orphan
+      await deleteDocumentFromStorage(newStoragePath).catch(() => {});
+      const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+      throw new Error(`Database error replacing document file: ${msg}`);
+    }
+  }
+
+  if (process.env.NODE_ENV === 'test' || process.env.ALLOW_MOCK_DB === 'true') {
+    const mock = mockDocStore.get(documentId);
+    if (mock) {
+      mock.fileName = fileValidation.sanitizedFileName;
+      mock.storagePath = newStoragePath;
+      mock.mimeType = fileValidation.mimeType;
+      mock.fileSize = incomingSize;
+      mock.updatedAt = new Date().toISOString();
+      mockDocStore.set(documentId, mock);
+      return mock;
+    }
+  }
+
+  await deleteDocumentFromStorage(newStoragePath).catch(() => {});
   throw new Error('Database is unavailable.');
 }
 

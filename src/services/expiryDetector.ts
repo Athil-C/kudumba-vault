@@ -425,7 +425,7 @@ export async function runDocumentExpiryJob(options: ExpiryJobOptions): Promise<E
     tracker,
     referenceDate,
     timeZone = 'Asia/Kolkata',
-    defaultRecipientEmail = process.env.ALERT_DEFAULT_RECIPIENT || 'athilchalil@gmail.com',
+    defaultRecipientEmail = process.env.ALERT_DEFAULT_RECIPIENT || '',
     baseUrl = process.env.APP_URL || 'http://localhost:3000',
     batchSize = 25,
   } = options;

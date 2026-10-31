@@ -621,8 +621,15 @@ export async function updateMember(
 
   if (isMockDb()) {
     const member = mockMemberStore.get(memberId);
-    if (!member || (!isSuperAdmin && String(member.ownerId) !== String(ownerId)) || member.deletedAt) {
-      throw new Error('Household member not found or access denied.');
+    if (!member || member.deletedAt) {
+      const err = new Error('Household member not found.');
+      (err as any).statusCode = 404;
+      throw err;
+    }
+    if (!isSuperAdmin && String(member.ownerId) !== String(ownerId)) {
+      const err = new Error('Access denied: You do not have permission to modify this household member.');
+      (err as any).statusCode = 403;
+      throw err;
     }
     if (input.nameEn !== undefined && input.nameEn.trim() !== member.nameEn) {
       const newName = input.nameEn.trim();
@@ -733,10 +740,24 @@ export async function updateMember(
     query.ownerId = queryOwnerId;
   }
 
+  const existsAnywhere = await HouseholdMemberModel.findById(memberId);
+  if (!existsAnywhere || existsAnywhere.deletedAt) {
+    const err = new Error('Household member not found.');
+    (err as any).statusCode = 404;
+    throw err;
+  }
+  if (!isSuperAdmin && String(existsAnywhere.ownerId) !== String(ownerId)) {
+    const err = new Error('Access denied: You do not have permission to modify this household member.');
+    (err as any).statusCode = 403;
+    throw err;
+  }
+
   const member = await HouseholdMemberModel.findOne(query);
 
   if (!member) {
-    throw new Error('Household member not found or access denied.');
+    const err = new Error('Household member not found.');
+    (err as any).statusCode = 404;
+    throw err;
   }
 
   // Duplicate checks if name, phone, or email are updated
@@ -864,8 +885,15 @@ export async function getMemberProfile(
   if (isMockDb()) {
     if (memberId) {
       member = mockMemberStore.get(memberId);
-      if (member && !isSuperAdmin && String(member.ownerId) !== String(ownerId)) {
-        member = null;
+      if (!member || member.deletedAt) {
+        const err = new Error('Household member profile not found.');
+        (err as any).statusCode = 404;
+        throw err;
+      }
+      if (!isSuperAdmin && String(member.ownerId) !== String(ownerId)) {
+        const err = new Error('Access denied: You do not have permission to view this member profile.');
+        (err as any).statusCode = 403;
+        throw err;
       }
     } else {
       member =
@@ -881,6 +909,17 @@ export async function getMemberProfile(
       throw new Error('Database is unavailable. Cannot load member profile.');
     }
     if (memberId && Types.ObjectId.isValid(memberId)) {
+      const existsAnywhere = await HouseholdMemberModel.findById(memberId);
+      if (!existsAnywhere || existsAnywhere.deletedAt) {
+        const err = new Error('Household member profile not found.');
+        (err as any).statusCode = 404;
+        throw err;
+      }
+      if (!isSuperAdmin && String(existsAnywhere.ownerId) !== String(ownerId)) {
+        const err = new Error('Access denied: You do not have permission to view this member profile.');
+        (err as any).statusCode = 403;
+        throw err;
+      }
       const q: any = { _id: new Types.ObjectId(memberId), deletedAt: null };
       if (!isSuperAdmin && Types.ObjectId.isValid(ownerId)) {
         q.ownerId = new Types.ObjectId(ownerId);
@@ -1032,8 +1071,15 @@ export async function deleteMember(
 
   if (isMockDb()) {
     const member = mockMemberStore.get(memberId);
-    if (!member || String(member.ownerId) !== String(ownerId) || member.deletedAt) {
-      throw new Error('Household member not found or access denied.');
+    if (!member || member.deletedAt) {
+      const err = new Error('Household member not found.');
+      (err as any).statusCode = 404;
+      throw err;
+    }
+    if (String(member.ownerId) !== String(ownerId) && context?.requesterRole !== 'ADMIN') {
+      const err = new Error('Access denied: You do not have permission to delete this household member.');
+      (err as any).statusCode = 403;
+      throw err;
     }
     if (member.role === 'OWNER') {
       const otherOwners = Array.from(mockMemberStore.values()).filter(
@@ -1062,6 +1108,18 @@ export async function deleteMember(
   }
   const queryOwnerId = new Types.ObjectId(ownerId);
 
+  const existsAnywhere = await HouseholdMemberModel.findById(memberId);
+  if (!existsAnywhere || existsAnywhere.deletedAt) {
+    const err = new Error('Household member not found.');
+    (err as any).statusCode = 404;
+    throw err;
+  }
+  if (String(existsAnywhere.ownerId) !== String(ownerId) && context?.requesterRole !== 'ADMIN') {
+    const err = new Error('Access denied: You do not have permission to delete this household member.');
+    (err as any).statusCode = 403;
+    throw err;
+  }
+
   const member = await HouseholdMemberModel.findOne({
     _id: new Types.ObjectId(memberId),
     ownerId: queryOwnerId,
@@ -1069,7 +1127,9 @@ export async function deleteMember(
   });
 
   if (!member) {
-    throw new Error('Household member not found or access denied.');
+    const err = new Error('Household member not found.');
+    (err as any).statusCode = 404;
+    throw err;
   }
 
   // Prevent deleting the household owner if it is the only OWNER

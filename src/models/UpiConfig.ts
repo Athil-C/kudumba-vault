@@ -30,7 +30,11 @@ const UpiConfigSchema = new Schema<IUpiConfig>(
       default: () => process.env.ADMIN_UPI_MERCHANT_NAME || 'Kudumba Vault',
     },
     qrImageUrl: { type: String, trim: true },
-    whatsappNumber: { type: String, trim: true, default: '+91 90612 64525' },
+    whatsappNumber: {
+      type: String,
+      trim: true,
+      default: () => process.env.ADMIN_WHATSAPP_NUMBER || process.env.VITE_WHATSAPP_SUPPORT_NUMBER || '+91 94470 00000',
+    },
     supportEmail: { type: String, trim: true, default: 'support@kudumbavault.com' },
     instructionsEn: {
       type: String,
@@ -63,7 +67,7 @@ export function getMockUpiConfig(): any {
       key: 'global_upi',
       upiId: process.env.ADMIN_UPI_ID || 'kudumbavault@oksbi',
       merchantName: process.env.ADMIN_UPI_MERCHANT_NAME || 'Kudumba Vault',
-      whatsappNumber: '+91 90612 64525',
+      whatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || process.env.VITE_WHATSAPP_SUPPORT_NUMBER || '+91 94470 00000',
       supportEmail: 'support@kudumbavault.com',
       instructionsEn:
         'Scan the UPI QR code below, complete the payment with the displayed amount, take a screenshot of the successful payment, and submit your UTR reference number.',

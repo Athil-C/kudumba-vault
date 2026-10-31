@@ -71,7 +71,11 @@ export const UpiPaymentPanel: React.FC<UpiPaymentPanelProps> = ({
 
   const activeUpiId = upiConfig?.upiId || 'kudumbavault@oksbi';
   const activeMerchant = upiConfig?.merchantName || 'Kudumba Vault';
-  const activeWhatsapp = upiConfig?.whatsappNumber || '+91 90612 64525';
+  const activeWhatsapp =
+    upiConfig?.whatsappNumber ||
+    ((import.meta as any).env?.VITE_WHATSAPP_SUPPORT_NUMBER
+      ? `+${(import.meta as any).env.VITE_WHATSAPP_SUPPORT_NUMBER}`
+      : '+91 94470 00000');
 
   const handleCopyUpi = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {

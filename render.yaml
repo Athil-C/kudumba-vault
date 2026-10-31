@@ -31,6 +31,8 @@ services:
         value: "kudumba-vault-documents"
       - key: ENCRYPTION_MASTER_KEY
         sync: false
+      - key: CRON_SECRET
+        sync: false
       - key: CORS_ORIGIN
         sync: false
       - key: GEMINI_API_KEY
@@ -40,4 +42,10 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false
       - key: ALERT_DEFAULT_RECIPIENT
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
