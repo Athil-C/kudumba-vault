@@ -30,6 +30,12 @@ import {
 import { adminCancelSubscription } from '../services/subscriptionService';
 import { PaymentRequest } from '../models/PaymentRequest';
 import { UpiConfig, setMockUpiConfig } from '../models/UpiConfig';
+import { sanitizeSearchRegex } from '../utils/regexSanitizer';
+import {
+  searchRateLimiter,
+  adminReconcileConcurrencyLimiter,
+  generalApiRateLimiter,
+} from '../middleware/rateLimiter';
 
 export const adminRouter = Router();
 
@@ -184,11 +190,11 @@ adminRouter.get('/overview', async (req, res) => {
 /* ==========================================================================
    2. USERS (/api/admin/users)
    ========================================================================== */
-adminRouter.get('/users', async (req, res) => {
+adminRouter.get('/users', searchRateLimiter, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
-    const search = (req.query.search as string || '').trim();
+    const search = (req.query.search as string || '').trim().slice(0, 100);
     const status = (req.query.status as string || '').trim();
     const role = (req.query.role as string || '').trim();
 
@@ -196,10 +202,11 @@ adminRouter.get('/users', async (req, res) => {
     if (status && status !== 'UNPROVISIONED') query.status = status;
     if (role) query.role = role;
     if (search) {
+      const safeSearch = sanitizeSearchRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { fullName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { fullName: { $regex: safeSearch, $options: 'i' } },
+        { email: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 
@@ -395,7 +402,7 @@ adminRouter.post('/users/reconcile', async (req, res) => {
   }
 });
 
-adminRouter.post('/users/reconcile-all', async (req, res) => {
+adminRouter.post('/users/reconcile-all', adminReconcileConcurrencyLimiter, async (req, res) => {
   try {
     const supabaseAdmin = getSupabaseStorageClient();
     if (!supabaseAdmin?.auth?.admin?.listUsers) {

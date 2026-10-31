@@ -16,6 +16,7 @@ import {
   _getMockSubscription,
 } from './subscriptionService';
 import { runTrialExpirationCycle } from './scheduler';
+import { setMailerTransporterForTesting } from './mailer';
 import { AUTHORITATIVE_PLANS, DEFAULT_TRIAL_DAYS, DEFAULT_GRACE_PERIOD_HOURS } from '../config/planConfig';
 import {
   uploadAndCreateDocument,
@@ -195,12 +196,12 @@ describe('Authoritative Free Trial Expiration, Entitlement Transition & Cron Aud
         userGamma,
         {
           nameEn: `Member ${i}`,
-          relationship: 'CHILD',
+          relationEn: 'Child',
         },
-        'user'
+        { requesterId: userGamma, requesterRole: 'USER' }
       );
     }
-    const membersBefore = await listMembers(userGamma, 'user');
+    const membersBefore = await listMembers(userGamma);
     assert.strictEqual(membersBefore.length, 5);
 
     // Expire trial
@@ -218,9 +219,9 @@ describe('Authoritative Free Trial Expiration, Entitlement Transition & Cron Aud
           userGamma,
           {
             nameEn: 'Member 6',
-            relationship: 'OTHER',
+            relationEn: 'Other',
           },
-          'user'
+          { requesterId: userGamma, requesterRole: 'USER' }
         );
       },
       (err: any) => {
