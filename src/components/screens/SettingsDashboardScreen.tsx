@@ -1363,6 +1363,13 @@ export const SettingsDashboardScreen: React.FC<SettingsDashboardScreenProps> = (
                     <div className="pt-2">
                       <a
                         href="/super-admin"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (typeof window !== 'undefined') {
+                            window.history.pushState(null, '', '/super-admin');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }
+                        }}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E03A45] hover:bg-[#C42F3A] text-white text-xs font-bold transition-colors shadow-xs"
                       >
                         <ShieldCheck className="w-4 h-4" />
