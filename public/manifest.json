@@ -10,6 +10,12 @@
   "theme_color": "#EA4C46",
   "icons": [
     {
+      "src": "/favicon.png",
+      "sizes": "110x100 192x192 512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icon.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",

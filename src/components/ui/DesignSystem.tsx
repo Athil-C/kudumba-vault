@@ -386,13 +386,12 @@ export const IconRail: React.FC<IconRailProps> = ({
       <div className="flex flex-col items-center w-full">
         {/* Top Brand Badge */}
         <div className="relative flex items-center justify-center">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-xs">
-            <div className="grid grid-cols-2 gap-0.5 p-1.5">
-              <span className="h-2.5 w-2.5 rounded-xs bg-[#FF4B55]" />
-              <span className="h-2.5 w-2.5 rounded-xs bg-[#EFC94C]" />
-              <span className="h-2.5 w-2.5 rounded-xs bg-[#1E4FD8]" />
-              <span className="h-2.5 w-2.5 rounded-xs bg-[#0B0B0C]" />
-            </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FDF9F2] shadow-xs overflow-hidden p-1 border border-white/20">
+            <img
+              src="/assets/kudumba-logo.png"
+              alt="Kudumba Vault Logo"
+              className="h-full w-full object-contain rounded-xl"
+            />
           </div>
         </div>
 

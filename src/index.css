@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 @theme {
+  --color-coral: #FF4C54;
+  --color-coral-dark: #E63B43;
+  --color-coral-soft: #FFF9F9;
+  --color-sun: #F7D02C;
+  --color-sun-light: #FFE259;
+  --color-ink: #0D0E12;
+  --color-ink-muted: #5A606E;
+  --font-display: 'Space Grotesk', 'Noto Sans Malayalam', sans-serif;
   --color-brand-coral: #FF4B55;
   --color-brand-coral-deep: #E03A45;
   --color-brand-coral-hover: #C42F3A;
@@ -334,4 +342,20 @@ h1, h2, h3, h4, h5, h6 {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Clean Coral-Red Surface with Subtle Vertical Wavy Lines */
+.coral-wave-bg {
+  background-color: #FF4C54;
+  background-image: url("data:image/svg+xml,%3Csvg width='1440' height='800' viewBox='0 0 1440 800' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.14' stroke-width='1.2'%3E%3Cpath d='M120 0 C155 240 85 520 125 800'/%3E%3Cpath d='M300 0 C265 260 335 540 295 800'/%3E%3Cpath d='M480 0 C515 240 445 520 485 800'/%3E%3Cpath d='M660 0 C625 260 695 540 655 800'/%3E%3Cpath d='M840 0 C875 240 805 520 845 800'/%3E%3Cpath d='M1020 0 C985 260 1055 540 1015 800'/%3E%3Cpath d='M1200 0 C1235 240 1165 520 1205 800'/%3E%3Cpath d='M1360 0 C1325 260 1395 540 1355 800'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: center;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.mascot-float {
+  animation: floatSlow 4.5s ease-in-out infinite;
 }
