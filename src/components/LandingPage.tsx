@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './modals/AuthModal';
+import { Globe, ShieldCheck, Zap, Users } from 'lucide-react';
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -62,7 +63,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       heroSubtitle:
         'Store Aadhaar, Passports, Emirates IDs, Land Tax receipts, Vehicle RC, Health Policies & Trusted Workers — everything your Kerala & NRI family needs in one powerful workspace.',
       heroPrimaryCta: 'Enter Kudumba Vault →',
-      heroSecondaryCta: 'Try Share Packs',
+      heroSecondaryCta: 'See How It Works',
       navCta: 'Enter Kudumba Vault →',
       communityHeading: 'Trusted by amazing Kerala & NRI communities',
       featHeading: 'Manage Every Family Document From One Powerful Workspace',
@@ -80,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       heroSubtitle:
         'ആധാർ, പാസ്പോർട്ട്, എമിറേറ്റ്സ് ഐഡി, ഭൂനികുതി രസീതുകൾ, വാഹന ആർസി, ഇൻഷുറൻസ് പോളിസികൾ — കേരളത്തിലെയും പ്രവാസി കുടുംബങ്ങൾക്കും ആവശ്യമായതെല്ലാം ഒരൊറ്റ വോൾട്ടിൽ.',
       heroPrimaryCta: 'കുടുംബ വോൾട്ടിലേക്ക് പ്രവേശിക്കുക →',
-      heroSecondaryCta: 'ഷെയർ പാക്കുകൾ',
+      heroSecondaryCta: 'എങ്ങനെ പ്രവർത്തിക്കുന്നു',
       navCta: 'കുടുംബ വോൾട്ട് →',
       communityHeading: 'കേരളത്തിലെയും പ്രവാസി കൂട്ടായ്മകളുടെയും വിശ്വസ്ത പങ്കാളി',
       featHeading: 'എല്ലാ കുടുംബ രേഖകളും ഒരൊറ്റ സുരക്ഷിത വോൾട്ടിൽ',
@@ -244,176 +245,158 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </svg>
 
       {/* ============================================================================
-           1. FLOATING PILL NAVBAR + CLEAN SPLIT HERO SECTION (ON #FF4C54 CORAL-RED)
+           1. MODERN HERO BANNER WITH INTEGRATED NAVBAR (MATCHING REFERENCE UI)
            ============================================================================ */}
-      <div className="coral-wave-bg text-white pt-5 pb-24 sm:pb-28">
-        {/* Floating White Pill Navigation Bar */}
-        <div className="max-w-[1160px] mx-auto px-4 sm:px-6">
-          <header className="bg-white text-ink rounded-full px-5 sm:px-7 py-3.5 shadow-xl border border-ink/10 flex items-center justify-between gap-4">
-            {/* Logo with House-Keyhole Badge */}
-            <a href="#" className="flex items-center gap-2.5 font-display font-extrabold text-lg sm:text-xl tracking-tight shrink-0">
-              <span className="w-8 h-8 rounded-full bg-coral flex items-center justify-center text-white shadow-xs">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 3L3 10.5h2.5V20h13v-9.5H21L12 3zm0 7.5a2 2 0 110 4 2 2 0 010-4z" />
-                </svg>
-              </span>
-              <div>
-                <span className="text-ink">KUDUMBA</span>
-                <span className="text-coral">VAULT</span>
+      <div className="p-3 sm:p-5 lg:p-6 bg-[#FAF9F6]">
+        <div className="relative rounded-[32px] sm:rounded-[44px] overflow-hidden bg-gradient-to-br from-[#E6283D] via-[#F23B50] to-[#D81B34] text-white px-5 sm:px-10 pt-6 pb-16 sm:pb-24 shadow-2xl">
+          {/* Subtle Organic Curved Background Wave Ribbons */}
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none opacity-25"
+            preserveAspectRatio="none"
+            viewBox="0 0 1440 700"
+          >
+            <path
+              d="M0 250 C320 500 620 180 1020 380 C1260 500 1440 320 1440 320 L1440 700 L0 700 Z"
+              fill="url(#waveGrad1)"
+            />
+            <path
+              d="M1440 120 C1180 280 880 120 580 320 C280 520 0 360 0 360 L0 0 L1440 0 Z"
+              fill="url(#waveGrad2)"
+            />
+            <defs>
+              <linearGradient id="waveGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.05" />
+              </linearGradient>
+              <linearGradient id="waveGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Top Integrated Navigation Bar */}
+          <header className="relative z-10 max-w-6xl mx-auto flex items-center justify-between gap-4 py-2">
+            {/* Logo */}
+            <a href="#" className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center justify-center">
+                <img
+                  src="/assets/kudumba-logo.png"
+                  alt="Kudumba Vault"
+                  className="h-10 w-10 sm:h-11 sm:w-11 object-contain drop-shadow-sm"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div className="font-display font-extrabold text-xl sm:text-2xl tracking-tight leading-none">
+                <span className="text-white">KUDUMBA</span>
+                <span className="text-sun ml-1">VAULT</span>
               </div>
             </a>
 
             {/* Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-ink/75">
-              <a href="#features" className="hover:text-coral transition-colors">
+            <nav className="hidden md:flex items-center gap-7 lg:gap-9 text-sm font-semibold text-white/90">
+              <a href="#features" className="hover:text-sun transition-colors">
                 {t.navFeatures}
               </a>
-              <a href="#why-vault" className="hover:text-coral transition-colors">
+              <a href="#why-vault" className="hover:text-sun transition-colors">
                 {t.navWhy}
               </a>
-              <a href="#stories" className="hover:text-coral transition-colors">
+              <a href="#stories" className="hover:text-sun transition-colors">
                 {t.navStories}
               </a>
-              <a href="#pricing" className="hover:text-coral transition-colors">
+              <a href="#pricing" className="hover:text-sun transition-colors">
                 {t.navPricing}
               </a>
-              <a href="#faq" className="hover:text-coral transition-colors">
+              <a href="#faq" className="hover:text-sun transition-colors">
                 {t.navFaq}
               </a>
             </nav>
 
-            {/* Right Actions */}
-            <div className="flex items-center gap-2.5 shrink-0">
+            {/* Right Actions: Glass Language Pill + Solid White CTA */}
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={toggleLanguage}
-                id="langBtn"
-                className="px-3.5 py-2 rounded-full bg-coral-soft hover:bg-sun/30 border border-rose-200 text-xs font-bold text-ink transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 border border-white/20 text-xs font-bold text-white transition-all cursor-pointer backdrop-blur-md shadow-xs"
               >
-                {lang === 'ml' ? 'മലയാളം ✓' : 'EN / മലയാളം'}
+                <Globe className="w-3.5 h-3.5 text-white/90" />
+                <span>{lang === 'ml' ? 'മലയാളം ✓' : 'EN / മലയാളം'}</span>
               </button>
               <button
                 type="button"
                 onClick={() => openModal('Enter Kudumba Vault')}
-                className="px-5 py-2.5 rounded-full bg-ink text-white hover:bg-sun hover:text-ink font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-full bg-white text-ink hover:bg-sun font-extrabold text-xs sm:text-sm transition-all shadow-md hover:shadow-lg cursor-pointer"
               >
                 {t.navCta}
               </button>
             </div>
           </header>
-        </div>
 
-        {/* Clean 2-Column Split Hero Section */}
-        <section className="max-w-[1160px] mx-auto px-6 pt-10 sm:pt-14">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            {/* Left Column: Editorial Typography & CTAs */}
-            <div className="lg:col-span-7 text-left space-y-6">
-              {/* Top Pill Badge */}
-              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-ink text-white text-xs sm:text-sm font-semibold shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-sun"></span>
-                <span>{t.heroBadge}</span>
-              </div>
+          {/* Centered Hero Content */}
+          <div className="relative z-10 text-center max-w-4xl mx-auto pt-14 sm:pt-20 pb-4">
+            {/* Bold Two-Line Headline with Sun Yellow Badge */}
+            <h1 className="font-display font-black tracking-tight leading-[1.08] text-5xl sm:text-6xl md:text-7xl lg:text-[80px] text-white">
+              <span className="block drop-shadow-sm">Make Your</span>
+              <span className="inline-block mt-3 sm:mt-4 px-7 sm:px-11 py-1.5 sm:py-2.5 rounded-2xl sm:rounded-3xl bg-sun text-ink font-black italic shadow-lg">
+                Vault Alive.
+              </span>
+            </h1>
 
-              {/* Left-Aligned Geometric Headline */}
-              <h1 className="font-display font-extrabold tracking-tight leading-[1.03] text-4xl sm:text-6xl lg:text-[66px]">
-                <span className="block text-white">Make Your</span>
-                <span className="inline-block mt-2 px-4 py-1 rounded-2xl bg-sun text-ink shadow-[4px_4px_0px_#0D0E12]">
-                  Vault Alive.
+            {/* Subtitle */}
+            <p className="mt-6 sm:mt-7 text-sm sm:text-base md:text-[17px] text-white/95 max-w-2xl mx-auto leading-relaxed font-normal">
+              {t.heroSubtitle}
+            </p>
+
+            {/* Action Buttons Row */}
+            <div className="mt-8 sm:mt-9 flex flex-wrap items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => openModal('Enter Kudumba Vault')}
+                className="px-8 sm:px-9 py-3.5 sm:py-4 rounded-full bg-white text-ink hover:bg-sun font-black text-sm sm:text-base transition-all shadow-xl hover:shadow-2xl cursor-pointer"
+              >
+                {t.heroPrimaryCta}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const feat = document.getElementById('features');
+                  if (feat) feat.scrollIntoView({ behavior: 'smooth' });
+                  else openModal('See How It Works');
+                }}
+                className="px-7 sm:px-8 py-3 sm:py-3.5 rounded-full bg-white/10 hover:bg-white/20 border-2 border-white/35 hover:border-white text-white font-bold text-sm sm:text-base flex items-center gap-2.5 transition-all backdrop-blur-md cursor-pointer"
+              >
+                <span className="w-5 h-5 rounded-full bg-white text-coral flex items-center justify-center text-[10px] pl-0.5 font-black shrink-0 shadow-xs">
+                  ▶
                 </span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-base sm:text-lg text-white/95 max-w-xl leading-relaxed font-normal">
-                {t.heroSubtitle}
-              </p>
-
-              {/* Action Buttons Row */}
-              <div className="pt-1 flex flex-wrap items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => openModal('Enter Kudumba Vault')}
-                  className="px-7 py-4 rounded-full bg-ink text-white hover:bg-sun hover:text-ink font-bold text-sm sm:text-base transition-all shadow-lg cursor-pointer"
-                >
-                  {t.heroPrimaryCta}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openModal('Try Share Packs')}
-                  className="px-7 py-4 rounded-full bg-white text-ink hover:bg-sun font-bold text-sm sm:text-base transition-all shadow-lg cursor-pointer"
-                >
-                  {t.heroSecondaryCta}
-                </button>
-              </div>
-
-              {/* Trust Checkmarks Row */}
-              <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm font-semibold text-white">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-sun text-ink flex items-center justify-center text-[10px] font-extrabold">
-                    ✓
-                  </span>
-                  No credit card required
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-sun text-ink flex items-center justify-center text-[10px] font-extrabold">
-                    ✓
-                  </span>
-                  Quick 10s setup
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 h-4 rounded-full bg-sun text-ink flex items-center justify-center text-[10px] font-extrabold">
-                    ✓
-                  </span>
-                  Built for Kerala &amp; NRI families
-                </span>
-              </div>
+                <span>{t.heroSecondaryCta}</span>
+              </button>
             </div>
 
-            {/* Right Column: Single Clean White Card with Mascot & 3 Document Pills */}
-            <div className="lg:col-span-5">
-              <div className="bg-white text-ink rounded-[28px] border-2 border-ink shadow-[8px_8px_0px_#0D0E12] p-6 sm:p-7">
-                {/* Soft Stage with 3D Capsule Mascot */}
-                <div className="rounded-2xl bg-coral-soft border border-rose-100 pt-5 pb-3 px-4 flex flex-col items-center relative overflow-hidden">
-                  <span className="px-3 py-1 rounded-full bg-sun/35 text-ink font-bold text-[11px] uppercase tracking-wider mb-1">
-                    Kerala ↔ Gulf Family Vault
-                  </span>
-                  <div className="w-36 sm:w-40 mascot-float">
-                    <svg viewBox="0 0 320 330" className="w-full h-auto" filter="url(#cleanShadow)">
-                      <use href="#kudumbaMascot" />
-                    </svg>
-                  </div>
+            {/* Trust Badges Row with Gold/Sun Icons */}
+            <div className="mt-10 sm:mt-12 flex flex-wrap items-center justify-center gap-x-8 sm:gap-x-12 gap-y-3 text-xs sm:text-sm font-semibold text-white/95">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-sun text-ink flex items-center justify-center shadow-xs shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-ink" />
                 </div>
-
-                {/* 3 Simple Horizontal Document Pills */}
-                <div className="mt-4 space-y-2.5">
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="text-xs sm:text-sm font-bold text-ink truncate">
-                      Passports &amp; Emirates ID
-                    </span>
-                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                      Verified · 60d Alert
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="text-xs sm:text-sm font-bold text-ink truncate">
-                      Kerala Land Tax &amp; Vehicle RC
-                    </span>
-                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-sun/40 text-ink text-[11px] font-bold">
-                      Kochi · Renewed
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="text-xs sm:text-sm font-bold text-ink truncate">Expiring Share Pack</span>
-                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-coral/15 text-coral font-bold text-[11px]">
-                      Watermarked · 24h Link
-                    </span>
-                  </div>
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-sun text-ink flex items-center justify-center shadow-xs shrink-0">
+                  <Zap className="w-4 h-4 text-ink fill-current" />
                 </div>
+                <span>Quick 10s setup</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-sun text-ink flex items-center justify-center shadow-xs shrink-0">
+                  <Users className="w-4 h-4 text-ink" />
+                </div>
+                <span>Built for Kerala &amp; NRI families</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
       </div>
 
       {/* ============================================================================
