@@ -561,9 +561,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        if (user) {
-          onSuccess(user);
-        }
+        onSuccess((user || { email: cleanEmail }) as SafeUser);
         handleClose();
       } finally {
         setIsLoading(false);
@@ -758,9 +756,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           : 'Email verified successfully! Your vault is ready.'
       );
 
-      if (user) {
-        onSuccess(user);
-      }
+      onSuccess((user || { email: email.trim() }) as SafeUser);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Verification failed.';

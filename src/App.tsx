@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import {
   VaultDocumentItem,
@@ -95,6 +95,12 @@ function AppWorkspaceContent() {
       }
     }
   }, [currentPath]);
+
+  useEffect(() => {
+    if (isAuthenticated && (isLoginView || isRegisterView)) {
+      navigateTo('/app');
+    }
+  }, [isAuthenticated, isLoginView, isRegisterView]);
 
   const navigateTo = (path: string) => {
     if (typeof window !== 'undefined') {
@@ -312,16 +318,39 @@ function AppWorkspaceContent() {
   const completenessScore = computeCompletenessScore(docs.length, 18);
 
   // Document Operations connected to MongoDB & Supabase Storage
+  const renewingDocsRef = useRef(new Set<string>());
+
   const handleRenewDocument = async (docId: string) => {
+    // 1. Prevent concurrent in-flight renewal
+    if (renewingDocsRef.current.has(docId)) {
+      console.warn(`[App] Renewal already in-flight for document ${docId}`);
+      return;
+    }
+
     try {
       const target = docs.find((d) => d.id === docId);
       if (!target) return;
+
+      // 2. Prevent duplicate renewals on the same calendar day
+      const today = new Date().toISOString().slice(0, 10);
+      const isAlreadyRenewedToday = target.renewalHistory?.some(
+        (entry) =>
+          entry.date === today &&
+          (entry.actionEn?.toLowerCase().includes('renewed') || entry.actionMl?.includes('പുതുക്കി'))
+      );
+
+      if (isAlreadyRenewedToday) {
+        console.warn(`[App] Document ${docId} has already been renewed today; blocking duplicate renewal.`);
+        return;
+      }
+
+      renewingDocsRef.current.add(docId);
+
       const currentExpiry = target.expiryDate && target.expiryDate !== 'Lifetime' ? new Date(target.expiryDate) : new Date();
       currentExpiry.setFullYear(currentExpiry.getFullYear() + 1);
       const newExpiryIso = currentExpiry.toISOString().slice(0, 10);
       const actionEn = `Renewed until ${newExpiryIso}`;
       const actionMl = `${newExpiryIso} വരെ പുതുക്കി`;
-      const today = new Date().toISOString().slice(0, 10);
       const historyEntry = { id: `ren-${Date.now()}`, date: today, actionEn, actionMl, by: 'Household Admin' };
       const updatedHistory = [historyEntry, ...(target.renewalHistory || [])];
 
@@ -343,6 +372,8 @@ function AppWorkspaceContent() {
       );
     } catch (err) {
       console.error('[App] Failed to renew document in MongoDB:', err);
+    } finally {
+      renewingDocsRef.current.delete(docId);
     }
   };
 

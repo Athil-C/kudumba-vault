@@ -9,6 +9,7 @@ import {
   Maximize2,
   Download,
   X,
+  Check,
   Image as ImageIcon,
   Undo2,
   Trash2,
@@ -46,11 +47,23 @@ export const Screen3DocumentDetail: React.FC<Screen3DocumentDetailProps> = ({
 }) => {
   const [revealed, setRevealed] = useState(false);
   const [justRenewed, setJustRenewed] = useState(false);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [renewNotice, setRenewNotice] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const isAlreadyRenewedToday = Boolean(
+    justRenewed ||
+    doc.renewalHistory?.some(
+      (e) =>
+        e.date === today &&
+        (e.actionEn?.toLowerCase().includes('renewed') || e.actionMl?.includes('പുതുക്കി'))
+    )
+  );
 
   const handleDelete = async () => {
     if (!deleteConfirm) {
@@ -69,9 +82,33 @@ export const Screen3DocumentDetail: React.FC<Screen3DocumentDetailProps> = ({
     }
   };
 
-  const handleRenew = () => {
-    onRenewDocument(doc.id);
-    setJustRenewed(true);
+  const handleRenew = async () => {
+    if (isAlreadyRenewedToday) {
+      setRenewNotice(
+        lang === 'ml'
+          ? 'ഈ രേഖ ഇന്ന് ഇതിനകം പുതുക്കിയിട്ടുണ്ട്.'
+          : 'This document has already been marked as renewed today.'
+      );
+      setTimeout(() => setRenewNotice(null), 3000);
+      return;
+    }
+    if (isRenewing) return;
+
+    setIsRenewing(true);
+    try {
+      await Promise.resolve(onRenewDocument(doc.id));
+      setJustRenewed(true);
+      setRenewNotice(
+        lang === 'ml'
+          ? 'രേഖ വിജയകരമായി 1 വർഷത്തേക്ക് പുതുക്കി!'
+          : 'Document successfully renewed for +1 year!'
+      );
+      setTimeout(() => setRenewNotice(null), 4000);
+    } catch (err) {
+      console.error('Failed to renew document:', err);
+    } finally {
+      setIsRenewing(false);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,19 +347,57 @@ export const Screen3DocumentDetail: React.FC<Screen3DocumentDetailProps> = ({
         </div>
 
         {/* Action Strip: Mark as Renewed + Back */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <Button variant="primary" size="lg" onClick={handleRenew}>
-            <RefreshCw className="h-5 w-5" />
-            <span>
-              {lang === 'ml'
-                ? 'പുതുക്കിയതായി രേഖപ്പെടുത്തുക (+1 വർഷം)'
-                : 'Mark as Renewed (+1 Year)'}
-            </span>
-          </Button>
+        <div className="flex flex-col gap-2.5 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant={isAlreadyRenewedToday ? 'outline' : 'primary'}
+              size="lg"
+              onClick={handleRenew}
+              disabled={isAlreadyRenewedToday || isRenewing}
+              className={
+                isAlreadyRenewedToday
+                  ? '!border-[#10B981] !text-[#059669] !bg-[#ECFDF5] hover:!bg-[#ECFDF5] opacity-90 cursor-default'
+                  : ''
+              }
+            >
+              {isRenewing ? (
+                <RefreshCw className="h-5 w-5 animate-spin" />
+              ) : isAlreadyRenewedToday ? (
+                <Check className="h-5 w-5 stroke-[2.5]" />
+              ) : (
+                <RefreshCw className="h-5 w-5" />
+              )}
+              <span>
+                {isRenewing
+                  ? lang === 'ml'
+                    ? 'പുതുക്കുന്നു...'
+                    : 'Renewing...'
+                  : isAlreadyRenewedToday
+                  ? lang === 'ml'
+                    ? 'ഇന്ന് പുതുക്കി കഴിഞ്ഞു (+1 വർഷം)'
+                    : 'Renewed for this cycle (+1 Year)'
+                  : lang === 'ml'
+                  ? 'പുതുക്കിയതായി രേഖപ്പെടുത്തുക (+1 വർഷം)'
+                  : 'Mark as Renewed (+1 Year)'}
+              </span>
+            </Button>
 
-          <Button variant="outline" onClick={onBackToHome}>
-            <span>{lang === 'ml' ? '← ഡാഷ്ബോർഡിലേക്ക്' : '← Back to Dashboard'}</span>
-          </Button>
+            <Button variant="outline" onClick={onBackToHome}>
+              <span>{lang === 'ml' ? '← ഡാഷ്ബോർഡിലേക്ക്' : '← Back to Dashboard'}</span>
+            </Button>
+          </div>
+
+          {renewNotice && (
+            <div
+              className={`text-xs font-semibold px-3.5 py-2 rounded-xl transition-all animate-fade-in ${
+                isAlreadyRenewedToday
+                  ? 'bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]'
+                  : 'bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]'
+              }`}
+            >
+              {renewNotice}
+            </div>
+          )}
         </div>
       </Card>
 
@@ -376,31 +451,44 @@ export const Screen3DocumentDetail: React.FC<Screen3DocumentDetailProps> = ({
           </p>
         </Card>
 
-        <Card>
-          <h3 className="text-[14px] font-bold text-[#0B0B0C] font-malayalam tracking-tight">
-            {lang === 'ml' ? 'പുതുക്കിയ ചരിത്രം' : 'Renewal & Audit Log'}
-          </h3>
-          <div className="mt-4 space-y-3">
-            {doc.renewalHistory.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-start justify-between gap-3 rounded-xl bg-[#F4F5F7] border border-[#E6E8EC] p-3.5 text-[16px]"
-              >
-                <div>
-                  <p className="font-medium text-[#0B0B0C] font-malayalam">
-                    {lang === 'ml' ? entry.actionMl : entry.actionEn}
-                  </p>
-                  <p className="text-[#5B6168] mt-0.5">
-                    {lang === 'ml'
-                      ? `ചേർത്തത്: ${entry.by || doc.ownerEn.split(' ')[0] || 'Kudumba'}`
-                      : `Recorded by ${entry.by || doc.ownerEn.split(' ')[0] || 'Kudumba'}`}
-                  </p>
+        <Card className="flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E6E8EC]">
+            <h3 className="text-[14px] font-bold text-[#0B0B0C] font-malayalam tracking-tight">
+              {lang === 'ml' ? 'പുതുക്കിയ ചരിത്രം' : 'Renewal & Audit Log'}
+            </h3>
+            {doc.renewalHistory && doc.renewalHistory.length > 0 && (
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#F1F3F6] text-[#5B6168]">
+                {doc.renewalHistory.length} {lang === 'ml' ? 'രേഖകൾ' : 'entries'}
+              </span>
+            )}
+          </div>
+          <div className="mt-3.5 space-y-2.5 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            {doc.renewalHistory && doc.renewalHistory.length > 0 ? (
+              doc.renewalHistory.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-start justify-between gap-3 rounded-xl bg-[#F8F9FA] border border-[#E6E8EC] p-3 text-[14px] hover:bg-[#F1F3F6] transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[#0B0B0C] font-malayalam text-[13px] leading-snug">
+                      {lang === 'ml' ? entry.actionMl : entry.actionEn}
+                    </p>
+                    <p className="text-[#5B6168] mt-0.5 text-[11px]">
+                      {lang === 'ml'
+                        ? `ചേർത്തത്: ${entry.by || doc.ownerEn.split(' ')[0] || 'Kudumba'}`
+                        : `Recorded by ${entry.by || doc.ownerEn.split(' ')[0] || 'Kudumba'}`}
+                    </p>
+                  </div>
+                  <span className="text-[#7C879B] shrink-0 text-[11.5px] font-medium pt-0.5">
+                    {formatHumanDate(entry.date, lang)}
+                  </span>
                 </div>
-                <span className="text-[#5B6168] shrink-0">
-                  {formatHumanDate(entry.date, lang)}
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-[#7C879B] py-3 text-center">
+                {lang === 'ml' ? 'ലോഗ് വിവരങ്ങൾ ലഭ്യമല്ല' : 'No audit history available yet.'}
+              </p>
+            )}
           </div>
         </Card>
 

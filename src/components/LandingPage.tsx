@@ -45,6 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   useEffect(() => {
+    if (isAuthenticated) {
+      onEnterApp();
+    }
+  }, [isAuthenticated, onEnterApp]);
+
+  useEffect(() => {
     if (!toastVisible) return;
     const timer = setTimeout(() => {
       setToastVisible(false);
