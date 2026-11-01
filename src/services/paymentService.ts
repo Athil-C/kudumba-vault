@@ -79,8 +79,8 @@ export function calculatePlanPricing(
       break;
     case 'quarterly':
       durationMonths = 3;
-      // 3 months discount: ~13% for NRI Plus, ~10% for Partner Pro
-      planSavings = planId === 'nri-plus' ? 98 : 298;
+      // 3 months discount: ~13% discount
+      planSavings = Math.round(monthlyRate * 3 * 0.13);
       break;
     case 'yearly':
       durationMonths = 12;

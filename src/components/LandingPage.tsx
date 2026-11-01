@@ -723,7 +723,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* PLAN 2: Pro — NRI Family Plus (₹249/month - 3 months) */}
+          {/* PLAN 2: Pro — NRI Family Plus (₹99/month) */}
           <div className="bg-white rounded-3xl border-2 border-coral p-8 shadow-xl relative">
             <span className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-coral text-white text-[11px] font-bold uppercase">
               Popular
@@ -731,18 +731,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="text-xs font-bold uppercase tracking-wider text-coral">NRI Family Plan</div>
             <h3 className="font-display font-bold text-xl text-ink mt-1">Pro — NRI Family Plus</h3>
             <div className="mt-4 flex items-baseline gap-1">
-              <span className="font-display font-extrabold text-4xl text-ink">₹249</span>
+              <span className="font-display font-extrabold text-4xl text-ink">₹99</span>
               <span className="text-xs text-ink-muted font-semibold">/month</span>
             </div>
 
-            {/* Duration Pill (3 months only) */}
-            <div className="bg-[#F1F3F6] p-1 rounded-2xl inline-flex items-center gap-1 my-3">
-              <span className="py-1 px-3 rounded-xl text-xs font-bold bg-[#F23F4F] text-white shadow-xs text-center">
-                3 months
-              </span>
-            </div>
-
-            <ul className="mt-3 space-y-2.5 text-sm text-ink">
+            <ul className="mt-6 space-y-2.5 text-sm text-ink">
               <li>✓ Maximum 12 family members.</li>
               <li>✓ Only 15 GB of high-resolution document storage.</li>
               <li>✓ WhatsApp uploads limited to remote upload links.</li>
@@ -777,12 +770,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* PLAN 3: Partners & Societies — ₹999/month */}
+          {/* PLAN 3: Partners & Societies — ₹199/month */}
           <div className="bg-white rounded-3xl border border-slate-200 p-8">
             <div className="text-xs font-bold uppercase tracking-wider text-ink-muted">Communities &amp; RWAs</div>
             <h3 className="font-display font-bold text-xl text-ink mt-1">Partners &amp; Societies</h3>
             <div className="mt-4 flex items-baseline gap-1">
-              <span className="font-display font-extrabold text-4xl text-ink">₹999</span>
+              <span className="font-display font-extrabold text-4xl text-ink">₹199</span>
               <span className="text-xs text-ink-muted font-semibold">/month</span>
             </div>
 

@@ -398,16 +398,9 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                   : 'For Kerala & Gulf dual-resident families.'}
               </p>
 
-              {/* Segmented Duration Selector - 3 months only */}
-              <div className="bg-[#F1F3F6] p-1 rounded-2xl inline-flex items-center gap-1 my-3">
-                <span className="py-1.5 px-3.5 rounded-xl text-xs font-bold bg-[#F23F4F] text-white shadow-xs text-center">
-                  3 months
-                </span>
-              </div>
-
               {/* Pricing Box */}
-              <div className="bg-[#FFF0F1]/60 border border-[#F23F4F]/20 rounded-2xl p-4 my-2 flex items-baseline gap-1.5">
-                <span className="text-3xl sm:text-4xl font-black text-[#172033]">₹249</span>
+              <div className="bg-[#FFF0F1]/60 border border-[#F23F4F]/20 rounded-2xl p-4 my-4 flex items-baseline gap-1.5">
+                <span className="text-3xl sm:text-4xl font-black text-[#172033]">₹99</span>
                 <span className="text-xs font-semibold text-[#7C879B]">
                   {lang === 'ml' ? '/പ്രതിമാസം' : '/month'}
                 </span>
@@ -595,7 +588,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
 
               {/* Pricing Box */}
               <div className="bg-[#F8F9FA] border border-[#E8EBF0] rounded-2xl p-4 my-5 flex items-baseline gap-1.5">
-                <span className="text-3xl sm:text-4xl font-black text-[#172033]">₹999</span>
+                <span className="text-3xl sm:text-4xl font-black text-[#172033]">₹199</span>
                 <span className="text-xs font-semibold text-[#7C879B]">
                   {lang === 'ml' ? '/പ്രതിമാസം' : '/month'}
                 </span>

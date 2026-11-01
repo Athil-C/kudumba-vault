@@ -62,11 +62,8 @@ describe('PlanComparisonModal UI & Requirements Test Suite', () => {
     assert.ok(html.includes('NRI Family Plus'), 'NRI Family Plus card title');
     assert.ok(html.includes('POPULAR'), 'POPULAR badge on NRI card');
     assert.ok(html.includes('LIMITED TIME OFFER'), 'Limited time offer badge');
-    assert.ok(html.includes('₹249'), 'NRI Plus ₹249 price');
+    assert.ok(html.includes('₹99'), 'NRI Plus ₹99 price');
     assert.ok(html.includes('/month'), 'NRI Plus /month cadence');
-    assert.ok(html.includes('3 months'), 'Duration selector 3 months');
-    assert.ok(!html.includes('6 months'), '6 months option removed');
-    assert.ok(!html.includes('1 year'), '1 year option removed');
     assert.ok(html.includes('You save ₹1,500 today'), 'Savings pill');
     assert.ok(html.includes('Maximum 12 family members'), 'NRI Plus 12 members');
     assert.ok(html.includes('Only 15 GB of high-resolution document storage'), 'NRI Plus 15 GB');
@@ -75,7 +72,7 @@ describe('PlanComparisonModal UI & Requirements Test Suite', () => {
     // Card 3
     assert.ok(html.includes('Partners &amp; Societies'), 'Partners & Societies card title');
     assert.ok(html.includes('ULTRA'), 'ULTRA badge on Partners card');
-    assert.ok(html.includes('₹999'), 'Partners ₹999 price');
+    assert.ok(html.includes('₹199'), 'Partners ₹199 price');
     assert.ok(html.includes('Maximum 50 family/client seats'), 'Partners 50 seats');
     assert.ok(html.includes('Only 100 GB of vault storage'), 'Partners 100 GB');
     assert.ok(html.includes('Contact sales'), 'Contact sales action button');

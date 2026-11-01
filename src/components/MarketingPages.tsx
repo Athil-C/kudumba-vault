@@ -326,7 +326,7 @@ export const SecondaryMarketingPages: React.FC<SecondaryPageProps> = ({
             {
               nameEn: 'NRI Family Plus (Upcoming V2)',
               nameMl: 'എൻ.ആർ.ഐ ഫാമിലി പ്ലസ് (V2)',
-              price: '₹249',
+              price: '₹99',
               cadenceEn: 'per month (billed annually via UPI AutoPay)',
               cadenceMl: 'പ്രതിമാസം (UPI AutoPay സൗകര്യം)',
               highlight: false,
@@ -348,7 +348,7 @@ export const SecondaryMarketingPages: React.FC<SecondaryPageProps> = ({
             {
               nameEn: 'Partners: CAs & Societies (Upcoming V2)',
               nameMl: 'പാർട്ണർ പ്ലാൻ: CA & ഹൗസിംഗ് സൊസൈറ്റികൾ',
-              price: '₹999',
+              price: '₹199',
               cadenceEn: 'per month for up to 50 client households',
               cadenceMl: '50 ക്ലയന്റ് കുടുംബങ്ങൾ വരെ / മാസം',
               highlight: false,

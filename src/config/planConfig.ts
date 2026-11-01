@@ -54,7 +54,7 @@ export const AUTHORITATIVE_PLANS: Record<string, PlanConfiguration> = {
     id: 'nri-plus',
     nameEn: 'NRI Family Plus',
     nameMl: 'എൻ.ആർ.ഐ ഫാമിലി പ്ലസ്',
-    priceInr: 249,
+    priceInr: 99,
     cadence: 'MONTHLY',
     storageQuotaBytes: 15 * GIB_IN_BYTES, // 15 GiB
     maxFileSizeBytes: 50 * MIB_IN_BYTES, // 50 MB
@@ -80,7 +80,7 @@ export const AUTHORITATIVE_PLANS: Record<string, PlanConfiguration> = {
     id: 'partner-pro',
     nameEn: 'Partners & Societies',
     nameMl: 'പാർട്ണർ പ്ലാൻ',
-    priceInr: 999,
+    priceInr: 199,
     cadence: 'MONTHLY',
     storageQuotaBytes: 100 * GIB_IN_BYTES, // 100 GiB
     maxFileSizeBytes: 100 * MIB_IN_BYTES,

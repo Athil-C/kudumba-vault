@@ -44,39 +44,39 @@ test('Kudumba Vault — Manual UPI QR Subscription System & Admin Approval Engin
   });
 
   await t.test('1. Plan Pricing Engine: validates monthly, quarterly, and annual rates with coupon discounts', async () => {
-    // NRI Plus (₹249/mo) - 1 Month: 0 discount
+    // NRI Plus (₹99/mo) - 1 Month: 0 discount
     const monthly = calculatePlanPricing('nri-plus', 'monthly');
-    assert.equal(monthly.monthlyRate, 249);
+    assert.equal(monthly.monthlyRate, 99);
     assert.equal(monthly.durationMonths, 1);
-    assert.equal(monthly.baseTotal, 249);
+    assert.equal(monthly.baseTotal, 99);
     assert.equal(monthly.planSavings, 0);
-    assert.equal(monthly.finalPayable, 249);
+    assert.equal(monthly.finalPayable, 99);
 
-    // NRI Plus - 3 Months: savings 98 (₹747 - ₹98 = ₹649)
+    // NRI Plus - 3 Months: savings 39 (₹297 - ₹39 = ₹258)
     const quarterly = calculatePlanPricing('nri-plus', 'quarterly');
     assert.equal(quarterly.durationMonths, 3);
-    assert.equal(quarterly.baseTotal, 747);
-    assert.equal(quarterly.planSavings, 98);
-    assert.equal(quarterly.finalPayable, 649);
+    assert.equal(quarterly.baseTotal, 297);
+    assert.equal(quarterly.planSavings, 39);
+    assert.equal(quarterly.finalPayable, 258);
 
-    // NRI Plus - 12 Months: 20% discount (₹2988 - ₹598 = ₹2390)
+    // NRI Plus - 12 Months: 20% discount (₹1188 - ₹238 = ₹950)
     const yearly = calculatePlanPricing('nri-plus', 'yearly');
     assert.equal(yearly.durationMonths, 12);
-    assert.equal(yearly.baseTotal, 2988);
-    assert.equal(yearly.planSavings, 598);
-    assert.equal(yearly.finalPayable, 2390);
+    assert.equal(yearly.baseTotal, 1188);
+    assert.equal(yearly.planSavings, 238);
+    assert.equal(yearly.finalPayable, 950);
 
     // Coupon application: KUDUMBA10 (10% off payable amount)
     const withCoupon = calculatePlanPricing('nri-plus', 'monthly', 'KUDUMBA10');
     assert.equal(withCoupon.couponCode, 'KUDUMBA10');
-    assert.equal(withCoupon.couponDiscount, 25);
-    assert.equal(withCoupon.finalPayable, 224);
+    assert.equal(withCoupon.couponDiscount, 10);
+    assert.equal(withCoupon.finalPayable, 89);
 
     // Coupon FESTIE33 (33% off payable amount)
     const festieCoupon = calculatePlanPricing('nri-plus', 'monthly', 'FESTIE33');
     assert.equal(festieCoupon.couponCode, 'FESTIE33');
-    assert.equal(festieCoupon.couponDiscount, 82);
-    assert.equal(festieCoupon.finalPayable, 167);
+    assert.equal(festieCoupon.couponDiscount, 33);
+    assert.equal(festieCoupon.finalPayable, 66);
 
     // Invalid coupon code throws descriptive error
     assert.throws(
@@ -140,14 +140,14 @@ test('Kudumba Vault — Manual UPI QR Subscription System & Admin Approval Engin
     assert.ok(request._id || request.id);
     assert.equal(request.status, 'PENDING');
     assert.equal(request.subscriptionPlanId, 'nri-plus');
-    assert.equal(request.payableAmount, 224);
+    assert.equal(request.payableAmount, 89);
     assert.equal(request.billingAddressSnapshot.city, 'Kochi');
 
     // Retrieve active request via status helper
     const status = await getUserCurrentPaymentStatus(testUserId);
     assert.ok(status.activeRequest);
     assert.equal(status.activeRequest?.status, 'PENDING');
-    assert.equal(status.activeRequest?.payableAmount, 224);
+    assert.equal(status.activeRequest?.payableAmount, 89);
   });
 
   await t.test('4. Concurrency Guard: strictly rejects creating a second request while one is pending', async () => {
