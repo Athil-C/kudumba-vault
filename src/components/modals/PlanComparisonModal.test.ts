@@ -81,7 +81,7 @@ describe('PlanComparisonModal UI & Requirements Test Suite', () => {
     assert.ok(html.includes('Contact sales'), 'Contact sales action button');
   });
 
-  it('4. Renders promotional banner with mascot and online payments notice', () => {
+  it('4. Does not render temporary online payments unavailable banner', () => {
     const html = renderToStaticMarkup(
       React.createElement(PlanComparisonModal, {
         isOpen: true,
@@ -90,9 +90,7 @@ describe('PlanComparisonModal UI & Requirements Test Suite', () => {
       })
     );
 
-    assert.ok(html.includes('Notice:'), 'Notice header');
-    assert.ok(html.includes('Online payments are temporarily unavailable'), 'Online payments unavailable notice');
-    assert.ok(html.includes('/assets/avatar-mascot-hd.png'), 'Existing mascot image reused');
+    assert.ok(!html.includes('Online payments are temporarily unavailable'), 'Notice is removed');
   });
 
   it('5. Renders error message banner when checkoutError is provided', () => {

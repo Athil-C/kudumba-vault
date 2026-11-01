@@ -184,30 +184,13 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
           2. FULL-PAGE CONTENT BODY
          ========================================================================= */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Promotional Mascot Banner & Online Payments Notice */}
-        <div className="bg-[#FFF0F1] px-6 py-3 rounded-2xl border border-[#F23F4F]/15 flex flex-wrap items-center justify-between gap-3 text-xs text-[#172033] shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/assets/avatar-mascot-hd.png"
-              alt="Kudumba Mascot"
-              className="w-8 h-8 object-contain shrink-0"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-              }}
-            />
-            <span className="font-medium text-xs sm:text-sm">
-              <span className="font-bold text-[#F23F4F]">Notice:</span>{' '}
-              {lang === 'ml'
-                ? 'ഓൺലൈൻ പേയ്‌മെന്റുകൾ താൽക്കാലികമായി ലഭ്യമല്ല. പ്ലാൻ മാറ്റങ്ങൾക്ക് സപ്പോർട്ടുമായി ബന്ധപ്പെടുക.'
-                : 'Online payments are temporarily unavailable. Please contact support for plan changes.'}
-            </span>
-          </div>
-          {effectiveEntitlement && !isLoadingEntitlement && (
+        {effectiveEntitlement && !isLoadingEntitlement && (
+          <div className="flex justify-end">
             <span className="font-bold text-xs px-3 py-1 rounded-full bg-white border border-[#E8EBF0] text-[#7C879B]">
               Active Tier: {effectiveEntitlement.planId === 'founding-free' ? 'Founding Household' : effectiveEntitlement.planId} ({effectiveEntitlement.status})
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {checkoutError && (
           <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-[#F23F4F] text-xs sm:text-sm flex items-center gap-2.5">
@@ -761,7 +744,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
             • <strong>Trial Expiration:</strong> When your 3-day free trial ends, your stored documents remain safe and accessible forever. Uploads are temporarily paused until you upgrade to a paid tier.
           </p>
           <p>
-            • <strong>Billing &amp; Upgrades:</strong> Online payments are temporarily unavailable. All plan upgrades and account tier changes are managed directly by Kudumba Vault administration.
+            • <strong>Billing &amp; Upgrades:</strong> All plan upgrades and account tier changes are managed securely by Kudumba Vault administration.
           </p>
           <p>
             • <strong>Seat Expansion &amp; Custom Regulations:</strong> Partner seat expansion beyond 50 client units and bespoke municipal compliance tracking require administrative arrangement.
