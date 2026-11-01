@@ -65,8 +65,8 @@ describe('PlanComparisonModal UI & Requirements Test Suite', () => {
     assert.ok(html.includes('₹249'), 'NRI Plus ₹249 price');
     assert.ok(html.includes('/month'), 'NRI Plus /month cadence');
     assert.ok(html.includes('3 months'), 'Duration selector 3 months');
-    assert.ok(html.includes('6 months'), 'Duration selector 6 months');
-    assert.ok(html.includes('1 year'), 'Duration selector 1 year');
+    assert.ok(!html.includes('6 months'), '6 months option removed');
+    assert.ok(!html.includes('1 year'), '1 year option removed');
     assert.ok(html.includes('You save ₹1,500 today'), 'Savings pill');
     assert.ok(html.includes('Maximum 12 family members'), 'NRI Plus 12 members');
     assert.ok(html.includes('Only 15 GB of high-resolution document storage'), 'NRI Plus 15 GB');

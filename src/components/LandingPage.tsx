@@ -19,8 +19,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(autoOpenAuth);
   const [authMode, setAuthMode] = useState<'login' | 'register'>(initialAuthMode);
 
-  // Pro Plan Billing Cycle: 3 months (default), 6 months, 1 year
-  const [proCycle, setProCycle] = useState<'3m' | '6m' | '1y'>('3m');
+  // Pro Plan Billing Cycle: 3 months
+  const [proCycle] = useState<'3m'>('3m');
 
   // Expandable plan specs: card 0, card 1, card 2
   const [expandedPlans, setExpandedPlans] = useState<{ [key: number]: boolean }>({
@@ -113,17 +113,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     setFooterEmail('');
   };
 
-  // Pricing values based on selected cycle
+  // Pricing values based on selected cycle (3 months)
   const getProPriceDetails = () => {
-    switch (proCycle) {
-      case '6m':
-        return { price: '₹1,399', period: '/6 months', savings: 'You save ₹3,000 today' };
-      case '1y':
-        return { price: '₹2,499', period: '/year', savings: 'You save ₹6,000 today' };
-      case '3m':
-      default:
-        return { price: '₹249', period: '/month', savings: 'You save ₹1,500 today' };
-    }
+    return { price: '₹249', period: '/month', savings: 'You save ₹1,500 today' };
   };
 
   const proDetails = getProPriceDetails();
@@ -1505,35 +1497,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   For busier families, with optional add-ons when you need more capacity.
                 </p>
 
-                {/* Duration Selector Tabs */}
-                <div className="mt-5 bg-[#F3F2F2] p-1 rounded-full grid grid-cols-3 text-center text-[11.5px] font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setProCycle('3m')}
-                    className={`py-2 rounded-full transition-all cursor-pointer ${
-                      proCycle === '3m' ? 'bg-festRed text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
+                {/* Duration Badge - 3 months only */}
+                <div className="mt-5 bg-[#F3F2F2] p-1 rounded-full inline-flex text-center text-[11.5px] font-bold">
+                  <span className="py-1.5 px-4 rounded-full bg-festRed text-white shadow-sm">
                     3 months
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProCycle('6m')}
-                    className={`py-2 rounded-full transition-all cursor-pointer ${
-                      proCycle === '6m' ? 'bg-festRed text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    6 months
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProCycle('1y')}
-                    className={`py-2 rounded-full transition-all cursor-pointer ${
-                      proCycle === '1y' ? 'bg-festRed text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    1 year
-                  </button>
+                  </span>
                 </div>
 
                 {/* Gray Price Box */}

@@ -44,7 +44,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
   isProcessingCheckout = false,
   checkoutError = null,
 }) => {
-  const [selectedDuration, setSelectedDuration] = useState<'3 months' | '6 months' | '1 year'>('3 months');
+  const [selectedDuration] = useState<'3 months'>('3 months');
   const [isFoundingExpanded, setIsFoundingExpanded] = useState(false);
   const [isNriExpanded, setIsNriExpanded] = useState(false);
   const [isPartnerExpanded, setIsPartnerExpanded] = useState(false);
@@ -97,15 +97,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
   };
 
   const getSavingsText = () => {
-    switch (selectedDuration) {
-      case '6 months':
-        return 'You save ₹3,000 today';
-      case '1 year':
-        return 'You save ₹6,000 today';
-      case '3 months':
-      default:
-        return 'You save ₹1,500 today';
-    }
+    return 'You save ₹1,500 today';
   };
 
   return (
@@ -406,22 +398,11 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                   : 'For Kerala & Gulf dual-resident families.'}
               </p>
 
-              {/* Segmented Duration Selector */}
-              <div className="bg-[#F1F3F6] p-1 rounded-2xl flex items-center justify-between gap-1 my-3">
-                {(['3 months', '6 months', '1 year'] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setSelectedDuration(opt)}
-                    className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
-                      selectedDuration === opt
-                        ? 'bg-[#F23F4F] text-white shadow-xs'
-                        : 'text-[#7C879B] hover:text-[#172033]'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
+              {/* Segmented Duration Selector - 3 months only */}
+              <div className="bg-[#F1F3F6] p-1 rounded-2xl inline-flex items-center gap-1 my-3">
+                <span className="py-1.5 px-3.5 rounded-xl text-xs font-bold bg-[#F23F4F] text-white shadow-xs text-center">
+                  3 months
+                </span>
               </div>
 
               {/* Pricing Box */}
