@@ -35,9 +35,13 @@ function AppWorkspaceContent() {
 
   const [lang, setLang] = useState<'ml' | 'en'>(() => {
     try {
-      return (window.localStorage.getItem('kudumba_vault_lang') as 'ml' | 'en') || 'ml';
+      const stored = window.localStorage.getItem('kudumba_vault_lang') as 'ml' | 'en';
+      if (stored === 'ml' || stored === 'en') return stored;
+      const envDefault = (import.meta as any).env?.VITE_DEFAULT_LOCALE;
+      if (envDefault === 'ml' || envDefault === 'en') return envDefault;
+      return 'en';
     } catch {
-      return 'ml';
+      return 'en';
     }
   });
 

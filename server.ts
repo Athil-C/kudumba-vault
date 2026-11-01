@@ -236,7 +236,7 @@ async function startServer() {
     res.json({
       status: 'ok',
       service: 'kudumba-vault-phase-a',
-      defaultLocale: process.env.VITE_DEFAULT_LOCALE || 'ml',
+      defaultLocale: process.env.VITE_DEFAULT_LOCALE || 'en',
       database: {
         connected: dbStatus.connected,
         status: dbStatus.connected ? 'connected' : dbStatus.isMock ? 'mock' : 'disconnected',

@@ -89,7 +89,7 @@ git push -u origin main
 | `VITE_API_BASE_URL` | `https://kudumba-vault-api.onrender.com` | **Your Render backend URL from Step 2** (no trailing slash) |
 | `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` | Your Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOi...` | Supabase public anon key |
-| `VITE_DEFAULT_LOCALE` | `ml` | Default UI locale (`ml` or `en`) |
+| `VITE_DEFAULT_LOCALE` | `en` | Default UI locale (`en` or `ml`) |
 | `VITE_WHATSAPP_SUPPORT_NUMBER`| `919447000000` | Support WhatsApp contact (e.g. 91 + 10-digit number) |
 
 6. Click **Deploy**.

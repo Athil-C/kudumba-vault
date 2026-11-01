@@ -16,7 +16,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   initialAuthMode = 'login',
   autoOpenAuth = false,
 }) => {
-  const [lang, setLang] = useState<'ml' | 'en'>(initialLang);
+  const [lang, setLang] = useState<'ml' | 'en'>(() => {
+    try {
+      const stored = window.localStorage.getItem('kudumba_vault_lang') as 'ml' | 'en';
+      if (stored === 'ml' || stored === 'en') return stored;
+    } catch {
+      // Fallback
+    }
+    return initialLang;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(autoOpenAuth);
   const [authMode, setAuthMode] = useState<'login' | 'register'>(initialAuthMode);
 
@@ -100,11 +108,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const t = copy[lang];
 
   const toggleLanguage = () => {
-    if (lang === 'en') {
-      setLang('ml');
+    const nextLang = lang === 'en' ? 'ml' : 'en';
+    setLang(nextLang);
+    try {
+      window.localStorage.setItem('kudumba_vault_lang', nextLang);
+    } catch {
+      // Ignore storage error
+    }
+    if (nextLang === 'ml') {
       showToast('മലയാളം ഇന്റർഫേസ് സജീവമാക്കി');
     } else {
-      setLang('en');
       showToast('Switched to English');
     }
   };
